@@ -1,0 +1,282 @@
+[
+  {
+    "area": "Compute/Memory",
+    "items": [
+      {
+        "title": "Enhanced NVMe Memory Tiering",
+        "description": "The hypervisor keeps active pages in DRAM and offloads cold pages to local NVMe devices, expanding effective memory capacity without buying additional DRAM.",
+        "detail": "ESX 9.1 removes the host reboot requirement for enabling memory tiering and for device selection, which shortens the deployment and maintenance window. It removes the previous virtual machine type restrictions, so low-latency, security and monster virtual machines can now power on a tiered host. Software RAID-1 mirroring of the tiering device is supported without a performance penalty, so a device failure does not stop tiering regardless of NVMe endurance or wear-out. The vSphere Client adds cluster-level configuration for device and parameter selection, and a cost savings analysis view. Broadcom cites up to 40 percent lower server cost for clusters mixing AI and non-AI workloads.",
+        "affectedModules": ["mod3", "mod5", "mod7"],
+        "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/release-notes/vmware-cloud-foundation-9-1-0-0-release-notes/what-s-new/whats-new-vsphere.html"
+      },
+      {
+        "title": "Live patching for TPM-enabled ESX hosts",
+        "description": "Security patches are applied directly to running kernel memory, so virtual machines keep running with no maintenance window and no host evacuation.",
+        "detail": "Broadcom states live patching covers up to 80 percent of patch cases. It requires TPM-enabled hosts, which makes TPM presence a hardware design input. Because hosts are not evacuated, the cluster capacity normally reserved for rolling maintenance is no longer consumed for the covered patch classes, and the historical tension between prompt patching and avoiding downtime largely disappears.",
+        "affectedModules": ["mod8", "mod10"],
+        "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/release-notes/vmware-cloud-foundation-9-1-0-0-release-notes/what-s-new.html"
+      },
+      {
+        "title": "Topology-aware scheduling and vSphere Elastic Provisioning",
+        "description": "The scheduler becomes aware of processor topology to improve performance on modern high core count CPUs, and elastic provisioning simplifies bringing hosts online and adding capacity.",
+        "detail": "Elastic provisioning enables parallel imaging, automated discovery and consistent configuration application, which reduces the elapsed time to add hosts to a cluster. Topology-aware scheduling improves placement of virtual CPUs relative to physical core and cache topology on high core count parts. VCF 9.1 also adds enhanced DirectPath I/O support for AMD Instinct MI350 series GPUs alongside existing NVIDIA support, and enterprise support for Ubuntu operating system images.",
+        "affectedModules": ["mod7", "mod10"],
+        "source": "https://blogs.vmware.com/cloud-foundation/2026/05/05/announcing-vcf-9-1-modern-private-cloud-built-for-efficiency-and-resilience/"
+      }
+    ]
+  },
+  {
+    "area": "Storage",
+    "items": [
+      {
+        "title": "Extended vSAN deduplication and enhanced compression",
+        "description": "Inline data reduction is broadened across cluster types and workload profiles, lowering the raw storage footprint required per logical terabyte.",
+        "detail": "Deduplication now operates globally at the cluster level rather than over narrower data sets, and it is supported alongside data-at-rest encryption, so a security requirement for encryption no longer costs space efficiency. Compression efficiency improves. Both operate continuously in the background. Broadcom cites a reduction in block storage total cost of ownership of around 39 percent. These are vSAN ESA capabilities and are not available on vSAN OSA.",
+        "affectedModules": ["mod5", "mod7"],
+        "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/release-notes/vmware-cloud-foundation-9-1-0-0-release-notes/what-s-new.html"
+      },
+      {
+        "title": "Auto-RAID system-managed data resilience",
+        "description": "vSAN ESA selects the data placement scheme automatically from cluster topology, preferring space-efficient erasure coding, and re-evaluates as the cluster changes.",
+        "detail": "Auto-RAID uses FTT=1 with RAID-5 (2+1) for clusters of three to five hosts and FTT=2 with RAID-6 (4+2) for six or more hosts, both at 1.5x object capacity overhead. RAID-1 mirroring is used only for site resilience in stretched clusters and host resilience in two-node clusters. The optional 4+1 RAID-5 erasure code used in earlier ESA versions is no longer selected by Auto-RAID. Stripe widths and parity settings are hidden from the administrator, which removes the historical uncertainty about which policy to set. Auto-RAID is ESA-only and is not supported on OSA.",
+        "affectedModules": ["mod5", "mod7"],
+        "source": "https://blogs.vmware.com/cloud-foundation/2026/05/08/auto-raid-in-vsan-for-vcf-9-1/"
+      },
+      {
+        "title": "vSAN for Recovery with deep snapshot chains",
+        "description": "Native replication and snapshot capability for disaster recovery and ransomware recovery, using deep snapshot chains and integrated replication workflows.",
+        "detail": "Provides a streamlined path to both disaster recovery and ransomware recovery without a separate replication product, letting organisations recover quickly while keeping one operational model across environments. Pairs with the on-premises ransomware recovery clean-room workflow.",
+        "affectedModules": ["mod5", "mod8"],
+        "source": "https://blogs.vmware.com/cloud-foundation/2026/05/05/announcing-vcf-9-1-modern-private-cloud-built-for-efficiency-and-resilience/"
+      },
+      {
+        "title": "NVMe dispersed namespaces for partner stretched cluster solutions",
+        "description": "Enables storage partners to validate and support NVMe-based stretched cluster solutions alongside vSAN stretched clusters.",
+        "detail": "Broadens the set of supported stretched topologies where a second validated availability zone exists. The underlying site latency and witness prerequisites are unchanged: no more than 5 ms round trip between data sites and up to 200 ms round trip to an independent witness site.",
+        "affectedModules": ["mod5", "mod8"],
+        "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/release-notes/vmware-cloud-foundation-9-1-0-0-release-notes/what-s-new/whats-new-vsphere.html"
+      },
+      {
+        "title": "Native Object Storage (Tech Preview)",
+        "description": "Self-service S3-compatible object storage for developers, deployed, scaled and managed through the same workflows as block and file storage.",
+        "detail": "Delivered as a technical preview in 9.1. Extends the self-service storage catalogue available to tenants while keeping the platform team in control of the guardrails, using the same operational model as existing storage services.",
+        "affectedModules": ["mod5", "mod9"],
+        "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/release-notes/vmware-cloud-foundation-9-1-0-0-release-notes/what-s-new.html"
+      },
+      {
+        "title": "vVols deprecation",
+        "description": "Virtual Volumes are deprecated in VCF 9.1 and will be removed in a future release.",
+        "detail": "Broadcom advises planning migration to vSAN, NFS or Fibre Channel on the same timeline as the 9.1 upgrade. Any design that would have used vVols as a transitional storage model needs a target storage decision made up front, and workloads currently on vVols need a destination storage model settled before their migration wave runs.",
+        "affectedModules": ["mod5", "mod11"],
+        "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/deployment/upgrading-cloud-foundation.html"
+      }
+    ]
+  },
+  {
+    "area": "Networking",
+    "items": [
+      {
+        "title": "Distributed Transit Gateway with EVPN-VXLAN connectivity",
+        "description": "Direct workload integration with EVPN-VXLAN physical fabrics using BGP EVPN and VXLAN, without centralised gateway appliances in the traffic path.",
+        "detail": "Forwarding is distributed closer to the workload, and BGP EVPN control-plane connectivity is provided by the VCF Route Controller peering with the fabric's EVPN border gateways. Broadcom cites improved scale and performance plus simpler operational alignment between the virtual and physical networks. Standards-based EVPN and VXLAN interoperability with Arista Networks' Universal Cloud Network is the announced first ecosystem integration. Removing the centralised gateway from the north-south data path changes NSX Edge cluster sizing and placement decisions.",
+        "affectedModules": ["mod4", "mod7"],
+        "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/release-notes/vmware-cloud-foundation-9-1-0-0-release-notes/what-s-new/whats-new-nsx.html"
+      },
+      {
+        "title": "VKS multi-interface and dual-network support",
+        "description": "VKS clusters can be deployed with a secondary network interface, and pods running Antrea CNI can have secondary interfaces.",
+        "detail": "Both VKS cluster nodes and pod secondary NICs are mapped to VLAN-backed or overlay-backed subnets in an NSX VPC. This unblocks use cases previously impossible with a single interface: traffic isolation from primary networks, multicast traffic to and from container workloads, and direct access to physical systems such as NFS storage. It adds requirements to VPC address space and subnet planning.",
+        "affectedModules": ["mod4", "mod7", "mod9"],
+        "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/release-notes/vmware-cloud-foundation-9-1-0-0-release-notes/what-s-new/whats-new-nsx.html"
+      },
+      {
+        "title": "Istio service mesh for VKS workloads",
+        "description": "Istio service mesh is available at a per-VKS-cluster level for Supervisor-based workloads.",
+        "detail": "Provides mutual TLS between container workloads within a single VKS cluster, supports both sidecar and Istio Ambient (sidecar-less) modes, exposes all Istio security and traffic management APIs, and enables both Layer 4 and Layer 7 routing with the waypoint proxy included.",
+        "affectedModules": ["mod4", "mod9"],
+        "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/release-notes/vmware-cloud-foundation-9-1-0-0-release-notes/what-s-new/whats-new-nsx.html"
+      },
+      {
+        "title": "NSX appliances on Ubuntu 24.04 with chiseled containers",
+        "description": "All NSX appliances are upgraded to Ubuntu 24.04 and use chiseled containers to minimise the attack surface.",
+        "detail": "Reduces the attack surface of the networking control plane, improves deployment efficiency, and simplifies patch management through a unified, enterprise-supported stack. It is an operational and security improvement rather than a functional networking change.",
+        "affectedModules": ["mod4", "mod10"],
+        "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/release-notes/vmware-cloud-foundation-9-1-0-0-release-notes/what-s-new/whats-new-nsx.html"
+      }
+    ]
+  },
+  {
+    "area": "Management Plane",
+    "items": [
+      {
+        "title": "VCF Management Services replaces Aria Suite Lifecycle and the fleet management appliance",
+        "description": "A common containerised runtime, the VCF services runtime, now hosts the fleet-level and instance-level management components instead of running them as separate appliances.",
+        "detail": "The hosted components include fleet lifecycle, SDDC lifecycle, software depot, identity broker, log management, Salt master, Salt RaaS and real-time metrics. Fleet lifecycle orchestrates lifecycle operations across the fleet including planning and sequencing upgrades across instances, and lives in the first VCF instance; SDDC lifecycle performs install, update and patch procedures for the management components and exists in every instance. The mapping from earlier releases is: Aria Suite Lifecycle became VCF Operations fleet management in 9.0 and is now fleet lifecycle plus SDDC lifecycle; Workspace ONE Access became VCF Identity Broker and is now the identity broker component; Aria Operations for logs became VCF Operations for logs and is now log management. Aria Suite Lifecycle, VMware Identity Manager and Aria Operations for Logs have no 9.1 upgrade path. Deployment requires a dedicated /27 CIDR block for the services runtime and five unique FQDNs, for the services runtime, fleet components, instance components, identity broker and licence server, each resolving to an address outside the runtime IP range. A licence server appliance is mandatory and licences are managed through the VCF Business Services console. Deployment is performed from the VCF Operations user interface or the SDDC Manager API.",
+        "affectedModules": ["mod6", "mod10"],
+        "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/deployment/vcf-management-appliances.html"
+      },
+      {
+        "title": "SDDC Manager user interface deprecated",
+        "description": "The SDDC Manager user interface is deprecated and lifecycle work moves into VCF Operations.",
+        "detail": "The SDDC Manager appliance itself remains, one per VCF instance in the management domain, and its API remains the route for advanced operations such as stretching a vSAN cluster via the cluster stretch specification. Operational runbooks and role-based access design must therefore target VCF Operations as the lifecycle console, which raises the operational importance of VCF Operations availability.",
+        "affectedModules": ["mod6", "mod10"],
+        "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/deployment/vcf-management-appliances.html"
+      },
+      {
+        "title": "VCF Installer fully replaces Cloud Builder",
+        "description": "Cloud Builder is completely retired. Deployment moves from the Cloud Builder spreadsheet to a curated, guided set of steps in the VCF Operations user interface, with support for importing JSON configuration templates.",
+        "detail": "VCF Installer remains a standalone tool in 9.1, with some functionality integrated directly into VCF Operations workflows. Converging an existing vCenter and ESX 8.0 Update 3 or later environment into a VCF management domain is integrated into VCF Installer, and VCF Import for bringing existing vSphere estates into a VI workload domain is driven from VCF Operations. Neither pathway requires downtime or application migration. The Planning and Preparation Workbook remains the artefact for assembling and validating deployment inputs.",
+        "affectedModules": ["mod3", "mod6", "mod11"],
+        "source": "https://www.vmware.com/docs/vmware-cloud-foundation-9-1-general-faqs"
+      },
+      {
+        "title": "Identity broker transitions into the VCF services runtime",
+        "description": "In 9.1 the VCF Identity Broker becomes a component hosted on the VCF services runtime rather than a standalone appliance.",
+        "detail": "An identity broker is deployed automatically during installation or upgrade to 9.1 in the first management domain, and additional brokers can be deployed per instance as a day-two operation. The instance identity broker model includes a built-in internal load balancer, so no external load balancer is required or recommended. It supports scale-up (small, medium, large) and scale-out with multiple instances, and small size is explicitly not for production because it lacks service redundancy. An existing appliance-mode broker must be removed from the deployment specification or validation fails. One broker can serve up to five VCF instances.",
+        "affectedModules": ["mod6", "mod9"],
+        "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/design/design-library/single-sign-on-instance-models/external-vidb.html"
+      },
+      {
+        "title": "Refreshed fleet design blueprints and latency diagrams",
+        "description": "Broadcom refreshed the VCF fleet design blueprints and fleet latency diagrams for 9.1.",
+        "detail": "The blueprints span edge, fleet management, monitoring, alerting, troubleshooting, workload consumption, lateral security, data protection, disaster recovery and cyber recovery. The latency diagrams are published under network diagrams on the Broadcom ports site. These are the canonical designs to reference in high-level and low-level design documents.",
+        "affectedModules": ["mod6"],
+        "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/design/vmware-cloud-foundation-concepts/vcf-operations-deployment-models.html"
+      }
+    ]
+  },
+  {
+    "area": "Consumption/Automation",
+    "items": [
+      {
+        "title": "VKS and VM Fast-Deploy",
+        "description": "Linked clone technology significantly accelerates the deployment and upgrade of VKS clusters and virtual machines.",
+        "detail": "VCF 9.1 also supports linked clones of first class disks, used for fast provisioning of container storage volumes in VKS. Broadcom reports provisioning around 70 percent faster and maintenance downtime windows reduced by around 75 percent. Provisioning-time service level objectives become materially easier to meet, so any previously agreed provisioning targets should be reviewed after upgrade.",
+        "affectedModules": ["mod7", "mod9", "mod10"],
+        "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/release-notes/vmware-cloud-foundation-9-1-0-0-release-notes/what-s-new.html"
+      },
+      {
+        "title": "Simplified Container-as-a-Service with Container Service separation",
+        "description": "Self-service namespace provisioning with registry, ingress, quotas and identity inherited from existing VCF constructs, giving a simpler path to running containers without operating a full Kubernetes cluster.",
+        "detail": "Separates the container service concern from full Kubernetes cluster lifecycle management, creating a consumption tier between a virtual machine and a full VKS cluster. Because namespaces now inherit registry, ingress, quota and identity configuration automatically, getting the namespace trust boundary right delivers more value and the number of full VKS clusters a development platform needs can fall.",
+        "affectedModules": ["mod9"],
+        "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/release-notes/vmware-cloud-foundation-9-1-0-0-release-notes/what-s-new.html"
+      },
+      {
+        "title": "Infrastructure policies with delegated network security services",
+        "description": "Infrastructure policies let providers delegate control of services such as vDefend firewall and Avi load balancing to organizations, inside provider-defined guardrails.",
+        "detail": "Accompanied by tenant management improvements and self-service namespace provisioning. More capability can be delegated to tenants without weakening the tenancy boundary, because policy rather than manual provider action defines what a tenant may configure.",
+        "affectedModules": ["mod9"],
+        "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/release-notes/vmware-cloud-foundation-9-1-0-0-release-notes/what-s-new.html"
+      },
+      {
+        "title": "Mixed VM Apps and All Apps organization models on shared infrastructure",
+        "description": "Both organization models can run simultaneously and share the same vCenter and NSX infrastructure.",
+        "detail": "In VCF 9.0 the relationship was strictly one to one: an organisation running the VM Apps model that wanted to adopt Supervisor-based consumption had to stand up entirely new vCenter and NSX environments. In 9.1 both models can be selected during installation of the automation environment and can share existing vCenter and NSX. This makes a phased transition to All Apps possible without duplicating infrastructure.",
+        "affectedModules": ["mod7", "mod9"],
+        "source": "https://virtalles.com/posts/vcf9-vs-vcf91-whats-new/"
+      },
+      {
+        "title": "Supervisor scale to 500 Kubernetes clusters",
+        "description": "A single Supervisor now supports up to 500 Kubernetes clusters, roughly double the previous ceiling.",
+        "detail": "Critical for organisations building multi-tenant platforms or isolating workloads for compliance, since it allows hundreds of development teams to be supported from one management backbone. Combined with Fast Deploy, it means Supervisor zone layout can be driven by isolation and failure-domain reasoning rather than by scale limits.",
+        "affectedModules": ["mod9"],
+        "source": "https://blogs.vmware.com/cloud-foundation/2026/05/05/announcing-vcf-9-1-modern-private-cloud-built-for-efficiency-and-resilience/"
+      }
+    ]
+  },
+  {
+    "area": "Security/Compliance",
+    "items": [
+      {
+        "title": "On-premises ransomware recovery with isolated clean rooms",
+        "description": "Integrated cyber recovery into on-premises VCF isolated clean rooms, so recovery does not require moving data off-premises.",
+        "detail": "Provides isolated recovery environments with integrated validation tooling. Keeping recovery on-premises protects intellectual property such as AI models and training data from cross-border movement and avoids large bandwidth charges during a crisis restoration. It addresses precisely the failure class that high availability and replication cannot cover, since replicas faithfully reproduce encryption and deletion.",
+        "affectedModules": ["mod8"],
+        "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/release-notes/vmware-cloud-foundation-9-1-0-0-release-notes/what-s-new.html"
+      },
+      {
+        "title": "CrowdStrike Falcon endpoint security integration for recovery validation",
+        "description": "Recovered workloads are scanned and validated with CrowdStrike Falcon inside the isolated clean room before being returned to production.",
+        "detail": "Embeds endpoint validation directly into the recovery workflow, reducing reinfection risk and letting organisations use existing security tooling to confirm an environment is clean before restoring it. The clean-room scan and validation step must be built into recovery time objective calculations.",
+        "affectedModules": ["mod8"],
+        "source": "https://blogs.vmware.com/cloud-foundation/2026/05/05/announcing-vcf-9-1-modern-private-cloud-built-for-efficiency-and-resilience/"
+      },
+      {
+        "title": "Fleet-wide policy enforcement and continuous compliance",
+        "description": "Security policies such as password reuse restrictions are defined once at the fleet level and enforced automatically across all managed components.",
+        "detail": "In VCF 9.0 each product and component had independent password management rules, forcing fragmented manual administration of security policy. In 9.1 an administrator defines the rules in one place and the platform enforces and maintains consistency across every managed component. Combined with configuration drift visibility, compliance becomes a continuously measured platform state rather than a periodic audit exercise.",
+        "affectedModules": ["mod6", "mod10"],
+        "source": "https://virtalles.com/posts/vcf9-vs-vcf91-whats-new/"
+      },
+      {
+        "title": "Live patching reduces the security-versus-availability trade-off",
+        "description": "Zero-downtime live patching on TPM-enabled hosts supports up to 80 percent of use cases without host evacuation or a maintenance window.",
+        "detail": "Eliminates disruption to production services that require continuous availability while still allowing prompt application of security updates, helping maintain compliance and security posture without the operational impact normally associated with patching cycles.",
+        "affectedModules": ["mod8", "mod10"],
+        "source": "https://www.broadcom.com/company/news/product-releases/64326"
+      },
+      {
+        "title": "vSAN deduplication with data-at-rest encryption",
+        "description": "Deduplication is now supported alongside data-at-rest encryption.",
+        "detail": "Previously a requirement for data-at-rest encryption effectively cost space efficiency. In 9.1 the two coexist, so a security or compliance requirement for encryption no longer forces a capacity penalty, which changes the raw capacity sizing calculation for regulated workloads.",
+        "affectedModules": ["mod5"],
+        "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/release-notes/vmware-cloud-foundation-9-1-0-0-release-notes/what-s-new.html"
+      }
+    ]
+  },
+  {
+    "area": "Operations/Lifecycle",
+    "items": [
+      {
+        "title": "Management scale to 5000 ESX hosts",
+        "description": "A single instance can now manage up to 5000 ESX hosts, double the 2500 supported in VCF 9.0.",
+        "detail": "Removes scale ceiling as a driver for splitting an estate across multiple instances or fleets, so instance and fleet boundary decisions can be made on operational, latency and blast-radius grounds instead.",
+        "affectedModules": ["mod6", "mod10"],
+        "source": "https://blogs.vmware.com/cloud-foundation/2026/05/05/scale-simplify-and-secure-your-private-cloud-operations-with-vcf-9-1/"
+      },
+      {
+        "title": "Four times greater parallel upgrade capacity",
+        "description": "Parallel patch and upgrade capacity rises from 64 clusters in VCF 9.0 to 256 clusters concurrently in 9.1.",
+        "detail": "The parallelisation mechanism was rebuilt. Operators can complete substantially more maintenance work inside a scheduled window, which reduces the number of windows required and shortens the overall upgrade campaign for a large estate.",
+        "affectedModules": ["mod6", "mod10"],
+        "source": "https://blogs.vmware.com/cloud-foundation/2026/05/05/scale-simplify-and-secure-your-private-cloud-operations-with-vcf-9-1/"
+      },
+      {
+        "title": "Upgrade pre-checks",
+        "description": "VCF runs comprehensive pre-checks before an upgrade to identify issues that would cause it to fail.",
+        "detail": "The checks evaluate overall system health and verify adequate resource capacity, among other conditions. This shifts upgrade failure discovery from mid-window to pre-window, which is a direct manageability and availability improvement for maintenance planning.",
+        "affectedModules": ["mod10"],
+        "source": "https://blogs.vmware.com/cloud-foundation/2026/05/05/scale-simplify-and-secure-your-private-cloud-operations-with-vcf-9-1/"
+      },
+      {
+        "title": "Proactive diagnostics and improved health dashboards",
+        "description": "Improved VCF health dashboards and advanced vSAN diagnostics surface potential performance issues before they become outages.",
+        "detail": "Diagnostics highlight issues for vCenter, ESX hosts, vSAN and VCF Networking components including NSX Manager and Edge nodes, covering connectivity, service health and resource usage. This reduces the volume of custom instrumentation a design must build, though a curated dashboard tied to the customer's own service level objectives is still required.",
+        "affectedModules": ["mod10"],
+        "source": "https://blogs.vmware.com/cloud-foundation/2026/05/05/scale-simplify-and-secure-your-private-cloud-operations-with-vcf-9-1/"
+      },
+      {
+        "title": "Configuration drift visibility across instances, vCenter and clusters",
+        "description": "Lifecycle and configuration management provides granular visibility into configuration changes and drift across VCF instances, vCenter instances and individual clusters.",
+        "detail": "Turns dozens of separate per-component tasks into unified fleet operations, and makes drift an observable, alertable condition rather than something discovered during an incident or an audit.",
+        "affectedModules": ["mod6", "mod10"],
+        "source": "https://blogs.vmware.com/cloud-foundation/2026/05/05/scale-simplify-and-secure-your-private-cloud-operations-with-vcf-9-1/"
+      },
+      {
+        "title": "Unified backup and recovery of hosted management components",
+        "description": "Because the management services share a common containerised runtime, backup and recovery of the hosted components is streamlined into one operation.",
+        "detail": "Previously each management appliance carried its own backup and restore procedure. The unified architecture of the VCF services runtime means the platform's own recoverability plan covers the hosted components together, which simplifies the recoverability statement for the management plane.",
+        "affectedModules": ["mod6", "mod8"],
+        "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/deployment/vcf-management-appliances.html"
+      },
+      {
+        "title": "No significant changes to HCX migration methods",
+        "description": "VCF 9.1 introduces no major changes to the HCX migration method set.",
+        "detail": "Cold, Bulk, vMotion, Replication Assisted vMotion, OS Assisted Migration and HCX Assisted vMotion (Direct) behave as in 9.0, and the component remains branded VCF Operations HCX. Two adjacent changes matter for migration planning: the integrated converge and VCF Import pathways offer an in-place alternative to workload-by-workload migration, and vVols deprecation means source workloads on Virtual Volumes need a target storage model decided before their wave runs.",
+        "affectedModules": ["mod11"],
+        "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/workload-mobility/vmware-hcx-user-guide-vcf-9-0/migrating-virtual-machines-with-vmware-hcx/vmware-hcx-migration-types.html"
+      }
+    ]
+  }
+]

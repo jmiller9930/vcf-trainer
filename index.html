@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>VCF 9 Trainer</title>
+
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="description" content="Study, quiz and mock-exam trainer for the VMware Cloud Foundation 9 Architect exam.">
+
+<!-- PWA -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f172a">
+<meta name="color-scheme" content="light dark">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VCF9">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" href="icons/icon-192.png">
+
+<link rel="stylesheet" href="css/style.css">
+</head>
+
+<body>
+<a class="skip-link" href="#view">Skip to content</a>
+
+<header class="appbar">
+  <button id="navToggle" class="iconbtn" type="button" aria-label="Toggle navigation" aria-expanded="false" aria-controls="sidebar">
+    <span class="hamburger" aria-hidden="true"></span>
+  </button>
+
+  <div class="appbar-title">
+    <span class="logo" aria-hidden="true">VCF</span>
+    <h1>VCF 9 Trainer</h1>
+  </div>
+
+  <button id="themeToggle" class="iconbtn" type="button" aria-label="Switch colour theme">
+    <span class="theme-icon" aria-hidden="true"></span>
+  </button>
+</header>
+
+<div class="layout">
+  <nav id="sidebar" class="sidebar" aria-label="Main navigation">
+    <ul class="nav">
+      <li><a class="nav-link" href="#study"    data-section="study">    <span class="nav-ico" aria-hidden="true">◱</span> Study</a></li>
+      <li><a class="nav-link" href="#quiz"     data-section="quiz">     <span class="nav-ico" aria-hidden="true">◇</span> Quiz</a></li>
+      <li><a class="nav-link" href="#exam"     data-section="exam">     <span class="nav-ico" aria-hidden="true">◎</span> Exam</a></li>
+      <li><a class="nav-link" href="#delta"    data-section="delta">    <span class="nav-ico" aria-hidden="true">△</span> 9.1 Delta</a></li>
+      <li><a class="nav-link" href="#progress" data-section="progress"> <span class="nav-ico" aria-hidden="true">▤</span> Progress</a></li>
+    </ul>
+
+    <div class="sidebar-foot">
+      <div class="sidebar-stat">
+        <span class="sidebar-stat-label">Due today</span>
+        <span class="sidebar-stat-value" id="sidebarDue">–</span>
+      </div>
+      <div class="sidebar-stat">
+        <span class="sidebar-stat-label">Mastery</span>
+        <span class="sidebar-stat-value" id="sidebarMastery">–</span>
+      </div>
+    </div>
+  </nav>
+
+  <div id="scrim" class="scrim" hidden></div>
+
+  <main id="view" class="view" tabindex="-1">
+    <p class="loading">Loading content…</p>
+  </main>
+</div>
+
+<script src="js/data-loader.js"></script>
+<script src="js/quiz-engine.js"></script>
+<script src="js/app.js"></script>
+
+<script>
+  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function (err) {
+        console.warn('Service worker registration failed:', err);
+      });
+    });
+  }
+</script>
+</body>
+</html>

@@ -1,0 +1,8 @@
+.DS_Store
+Thumbs.db
+*.swp
+*~
+__pycache__/
+.vscode/
+.idea/
+__uitest.html
