@@ -1,6 +1,6 @@
 /* VCF 9 Trainer — service worker: cache-first offline shell. */
 
-const CACHE_NAME = 'vcf-trainer-v2';
+const CACHE_NAME = 'vcf-trainer-v3';
 
 /* Files the app cannot run without — a failure here fails the install. */
 const CORE_ASSETS = [

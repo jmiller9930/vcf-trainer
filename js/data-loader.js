@@ -110,6 +110,7 @@ window.DataLoader = (function () {
       question: str(raw.question || raw.prompt),
       recommendation: str(raw.recommendation || raw.decision_text || raw.choice),
       confidence: str(raw.confidence),
+      decisionRule: str(raw.decisionRule || raw.rule || raw.thinking),
       rationale: str(raw.rationale || raw.justification),
       alternative: str(raw.alternative || raw.alternatives),
       amprs: arr(amprsRaw).map(str).filter(Boolean),
@@ -145,7 +146,16 @@ window.DataLoader = (function () {
       keyFacts: arr(raw.keyFacts || raw.facts).map(normaliseFact).filter(f => f.text),
       attention: arr(raw.attention || raw.attentionItems || raw.watchOut).map(normaliseAttention).filter(a => a.text),
       decisions: arr(raw.decisions || raw.designDecisions).map((d, di) => normaliseDecision(d || {}, id, di)),
-      vcf91Updates: arr(raw.vcf91Updates || raw.updates91).map(normalise91Update).filter(u => u.title || u.description)
+      vcf91Updates: arr(raw.vcf91Updates || raw.updates91).map(normalise91Update).filter(u => u.title || u.description),
+      lesson: (() => {
+        const lesson = raw.lesson || raw.teach || {};
+        const what = str(lesson.what || raw.what);
+        const how = str(lesson.how || raw.how);
+        const why = str(lesson.why || raw.why || lesson.bestPractice || raw.bestPractice);
+        const goal = str(lesson.goal);
+        return (what || how || why) ? { what, how, why, goal } : null;
+      })(),
+      checkYourself: arr(raw.checkYourself || raw.checks || raw.reconstruct).map(str).filter(Boolean)
     };
   }
 

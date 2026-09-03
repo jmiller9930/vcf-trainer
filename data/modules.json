@@ -73,52 +73,63 @@
         "description": "The deployment entry point is now a guided flow in the VCF Operations user interface with support for importing JSON configuration templates, replacing the Cloud Builder spreadsheet upload. Cloud Builder is fully retired.",
         "impact": "The Planning and Preparation Workbook is still the artefact where you assemble and validate deployment inputs, but the handoff into deployment is now a guided UI or a JSON template rather than a spreadsheet import. Conceptual-model outputs should be captured in a form that maps cleanly onto the Installer's input schema."
       }
+    ],
+    "lesson": {
+      "what": "The conceptual model turns customer discovery into classified, traceable design inputs: Requirements, Constraints, Assumptions and Risks (RCAR), split into functional vs non-functional requirements, then linked to every later decision.",
+      "how": "Take each customer statement and classify it (RCAR). Decompose requirements into what the system must do (functional) vs how well (non-functional with a measurable target). Assign IDs (BRxx, Cxx, Axx, Rxx). Record each decision with recommendation, rejected alternative, AMPRS impact and those IDs. Fill the Planning Workbook with deployment inputs driven by those decisions.",
+      "why": "Best practice: never let product preference drive the design. An answer is defendable only when it traces to the conceptual model. Treat growth forecasts as assumptions until validated, existing infrastructure as constraints, and schedule conflicts as risks with owners.",
+      "goal": "After this module you should explain the mechanism without notes, then defend each design choice from evidence — not from a memorized letter."
+    },
+    "checkYourself": [
+      "Explain RCAR and give one RFS example of each bucket.",
+      "In one sentence: functional vs non-functional.",
+      "Why must every logical decision cite the conceptual model?"
     ]
   },
   {
     "id": "mod4",
     "title": "Networking",
-    "summary": "VCF 9 networking is two layers that must be designed together: a routed physical underlay, normally a Layer 3 spine-leaf fabric with redundant top-of-rack switches, and a Geneve-encapsulated NSX overlay that rides on top of it via host tunnel endpoints on a vSphere Distributed Switch. The design work is deciding single-rack versus multi-rack cluster models, proving end-to-end MTU for the overlay path, and sizing bandwidth with real headroom rather than nameplate link speed. In the case study the existing fabric is a constraint (C02), so the design retains the L3 spine-leaf underlay and validates that it can carry the overlay.",
+    "summary": "Networking is underlay + overlay. The underlay is the physical L3 fabric. The overlay is NSX Geneve on host TEPs. Design work is MTU proof, bandwidth headroom, and single-rack vs multi-rack — using RFS evidence, not product preference.",
     "components": [
       {
         "name": "Layer 3 Spine-Leaf Underlay",
-        "what": "The physical network fabric that carries all VCF traffic. Each rack has a redundant pair of top-of-rack (leaf) switches, every ESX host dual-attaches to both leaves with 802.1Q trunks, and the leaves uplink to spine switches. In a Layer 3 model the routing boundary sits at the top of rack, so each rack owns its own subnets and the spine layer routes between racks.",
-        "how": "VLANs are provisioned per traffic type and trunked to every host uplink: ESX host management, VM management, vSphere vMotion, vSAN, NSX host overlay (host TEP), NSX Edge overlay (edge TEP) and NSX Edge uplinks. Note that management is two VLANs, not one: a VLAN for host management and a separate VLAN for the VM management network where the VCF appliances run. In a Layer 3 multi-rack model each of these functions is rack-local with a separate subnet per rack and a highly available first-hop gateway at the leaves (HSRP, VRRP or anycast), and the networks must be routable across racks. BGP is the usual routing protocol, and it is also how NSX Edge nodes peer with the fabric to advertise overlay networks northbound. Broadcom's reference physical design recommends two ToR switches per rack and 25 GbE host uplinks with 10 GbE as the floor.",
-        "why": "A routed fabric scales linearly, keeps failure and broadcast domains small, and removes the large stretched Layer 2 domains that make traditional data centre networks fragile. Broadcom aligns VCF on spine-leaf because the overlay supplies logical Layer 2 adjacency where workloads need it, so the physical fabric no longer has to. Choose Layer 3 multi-rack when racks are independent failure and power domains and you want rack-level resilience plus horizontal scale; choose a single-rack model when the cluster fits in one rack and you would rather not carry the extra routing and IP-management overhead.",
+        "what": "Physical fabric: redundant ToR leaf switches per rack, hosts dual-attached, leaves uplinked to spines. In L3, routing starts at the ToR — each rack has its own subnets.",
+        "how": "Create VLANs per traffic type (host mgmt, VM mgmt, vMotion, vSAN, host TEP, Edge TEP, Edge uplinks) and trunk them to hosts. Multi-rack = per-rack subnet + HA gateway at the leaf; spines route between racks (usually BGP).",
+        "why": "Routed fabrics scale and keep failure domains small. Broadcom expects spine-leaf because the overlay supplies logical L2 where needed. If the fabric already exists as a constraint, retain and validate — do not redesign for preference.",
         "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/design/design-library/cluster-models/layer-3-multi-rack-cluster.html",
-        "examTip": "Know that in a Layer 3 multi-rack cluster you use a separate host TEP transport VLAN and subnet per rack, with a highly available gateway at the top of rack. If a question hands you an existing L3 spine-leaf fabric as a constraint, the correct move is to retain it and validate overlay support, not to redesign the fabric."
+        "examTip": "Constraint + already L3 spine-leaf ⇒ retain and validate overlay. Multi-rack needs per-rack TEP VLAN/subnet + HA ToR gateway."
       },
       {
         "name": "VXLAN and Geneve Overlay",
-        "what": "The overlay is the logical network layer that encapsulates workload Ethernet frames inside UDP packets so they can be carried across a routed underlay. NSX in VCF uses Geneve encapsulation (the successor to VXLAN, and the term VXLAN is still used generically for tunnelled overlays and specifically for the new EVPN-VXLAN fabric interoperability in 9.1). Encapsulation and decapsulation happen at tunnel endpoints (TEPs) on each transport node.",
-        "how": "Each ESX host prepared as an NSX transport node gets one or more TEP VMkernel interfaces on the TEP VLAN. When a VM sends a frame, the host looks up the destination's TEP, wraps the frame in a Geneve header plus outer UDP/IP headers, and sends it to the remote TEP across the underlay; the remote host strips the headers and delivers the original frame. Because the outer headers add roughly 100 bytes, the underlay MTU must exceed the guest MTU. The hard floor for the TEP path is 1600 bytes, Broadcom recommends at least 1700 to absorb Geneve header growth, and 9000 (jumbo) is the optimal setting where the underlay supports it. All transport nodes for a domain share a single overlay transport zone so that every host and Edge node can reach every segment and VPC.",
-        "why": "The overlay decouples workload addressing and adjacency from the physical fabric, which is what makes self-service networking, multi-tenancy and workload mobility possible without touching switch configuration. Broadcom made the overlay mandatory for full VCF capability, notably VPC networking and Supervisor, because tenant-driven network creation cannot depend on a network team provisioning VLANs.",
+        "what": "Logical network layer: workload Ethernet frames are encapsulated in UDP and carried across the routed underlay. NSX in VCF uses Geneve (VXLAN is often used as the generic term / 9.1 EVPN-VXLAN fabric interop).",
+        "how": "Each transport node gets TEP VMkernel(s). Source host wraps frames in Geneve + outer IP/UDP → underlay routes to remote TEP → remote host unwraps. Outer headers need ~100 bytes, so underlay MTU must exceed guest MTU (min 1600, recommend 1700, optimal 9000).",
+        "why": "Overlay decouples tenant networks from switch VLAN churn — required for VPC, Supervisor, and Automation self-service. Without proven end-to-end MTU, tunnels fail under load while small pings still “work.”",
         "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/design/design-library/cluster-models/layer-3-multi-rack-cluster.html",
-        "examTip": "The overlay's non-negotiable dependency is consistent MTU end to end. 1600 is the minimum the installer validates, 1700 is the recommendation, 9000 is optimal. Also remember that a single overlay transport zone per NSX instance is the design requirement."
+        "examTip": "Memorize the MTU ladder (1600/1700/9000) and that one overlay transport zone serves the NSX instance."
       },
       {
         "name": "NSX",
-        "what": "NSX is the software-defined networking and security layer of VCF. It comprises an NSX Manager cluster (management and control plane), the distributed data plane implemented in every prepared ESX host, and NSX Edge nodes that provide centralised services and north-south routing. In VCF it is deployed and lifecycle-managed as part of a domain rather than installed independently.",
-        "how": "Hosts are prepared as transport nodes using transport node profiles applied at cluster level, which is why transport node configuration is a cluster-scoped decision. NSX then provides logical segments, distributed routing, the distributed firewall, VPCs, load balancing and gateway services. The management domain gets an NSX Manager cluster; the first workload domain gets its own NSX Manager cluster deployed into the management domain, and additional workload domains can either share an existing NSX Manager cluster or receive a new one, which is a deliberate lifecycle and isolation decision. NSX is prepared directly on a VDS of version 8.0 or later; there is no legacy N-VDS in VCF 9.",
-        "why": "Broadcom centralises networking and micro-segmentation in NSX so that security policy follows the workload rather than the wire, and so that consumption layers such as Supervisor and VCF Automation have an API-driven network to carve up. Sharing an NSX Manager cluster reduces appliance count and cost; separating it gives independent lifecycle and a smaller blast radius, which is the usual reason to accept the extra footprint.",
+        "what": "VCF SDN/security stack: NSX Manager (control), distributed data plane on hosts, Edge nodes for north-south and centralized services. Lifecycle-managed with the domain.",
+        "how": "Transport node profiles prepare hosts at cluster scope. NSX delivers segments, distributed routing/firewall, VPCs, and gateways. NSX prepares on VDS 8.0+ (no N-VDS in VCF 9). Workload domains may share or get their own Manager cluster.",
+        "why": "Policy follows the workload, not the wire. Share Manager to reduce footprint; separate Manager for lifecycle isolation / smaller blast radius.",
         "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/overview-of-vmware-cloud-foundation-9/workload-domains-in-vmware-cloud-foundation.html",
-        "examTip": "Know the sharing rule for NSX Manager across workload domains: share with an existing domain or the management domain, or deploy a new cluster. The trade-off is footprint and cost against lifecycle independence and failure isolation."
+        "examTip": "Share vs new NSX Manager = footprint vs lifecycle isolation. Know VDS 8.0+ preparation."
       },
       {
         "name": "vSphere Distributed Switch (VDS)",
-        "what": "The VDS is the virtual switch object defined at the vCenter level and pushed to every host in the cluster, providing consistent port groups, uplink teaming, VLAN tagging and MTU configuration across the whole cluster. In VCF 9 it must be version 8.0 or later and it is the substrate NSX prepares for overlay traffic.",
-        "how": "VCF creates and manages the VDS for each cluster, mapping physical NICs to uplinks and creating distributed port groups for the VLAN-backed traffic types. Because configuration is centralised in vCenter and applied uniformly, host-level configuration drift is eliminated. The MTU set on the VDS and its port groups must match the physical fabric and the NSX TEP setting; a VDS at 9000 over a fabric at 1500 produces the classic failure signature where small pings succeed but vSAN, vMotion and NSX tunnels break. A design decision that frequently appears is whether to use a single VDS carrying all traffic types or separate VDS instances to segregate storage traffic from workload traffic.",
-        "why": "Broadcom standardises on the VDS because consistency is a manageability and availability property: identical switch configuration on every host is what lets DRS, HA, vMotion and NSX behave predictably. Separate VDS instances buy physical isolation for storage traffic at the cost of more uplinks and more configuration surface; a single VDS is simpler to operate and is normally sufficient when uplink bandwidth is adequate.",
+        "what": "Cluster-wide virtual switch defined in vCenter and pushed to every host — consistent port groups, uplinks, VLANs, and MTU. Substrate NSX prepares for overlay.",
+        "how": "VCF creates the VDS, maps NICs to uplinks, and builds port groups for VLAN-backed traffic. MTU on VDS must match fabric and NSX TEP settings. Optional: separate VDS for storage vs workload when dedicated uplinks exist.",
+        "why": "Identical host networking makes HA/DRS/vMotion/NSX predictable. Separation buys isolation at the cost of NICs/ports/ops; bandwidth headroom decides, not aesthetics.",
         "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vsphere/vsphere/9-0/vsphere-networking.html",
-        "examTip": "Remember that the VDS is one of several places MTU must agree, and that all of them must agree: physical switches and routers, VDS and port groups, VMkernel adapters, and the NSX global TEP setting."
+        "examTip": "MTU must agree in four places: physical path, VDS/port groups, VMkernel, NSX TEP."
       },
       {
         "name": "VMkernel Networks",
-        "what": "VMkernel adapters are the host's own IP interfaces, each enabled for one or more system traffic services: management, vMotion, vSAN, vSAN witness, NSX host overlay (TEP), NFS and others. They are the endpoints for all infrastructure traffic, as distinct from workload traffic which terminates on VM vNICs.",
-        "how": "Each VMkernel adapter is placed on a distributed port group carrying the appropriate VLAN and inherits or sets an MTU. In a Layer 3 multi-rack model each service gets a rack-local subnet, so hosts in different racks have different VMkernel addresses for the same service and rely on the fabric to route between them. Verification is done from the host with a do-not-fragment ping sized to the payload, for example vmkping with the don't-fragment flag and a payload of 8972 bytes to prove a 9000-byte path, and it must be run between hosts in different racks and across different leaf pairs, because the failure is almost always at the Layer 3 boundary rather than within a rack.",
-        "why": "Separating infrastructure traffic onto dedicated VMkernel interfaces and VLANs is what allows independent MTU, quality of service and failure isolation per traffic type. Broadcom requires this separation because vSAN and overlay traffic have jumbo-frame and latency characteristics that management traffic does not, and mixing them without separation makes performance problems undiagnosable.",
+        "what": "Host IP interfaces for system traffic (mgmt, vMotion, vSAN, TEP, etc.) — not VM guest NICs.",
+        "how": "Each VMkernel sits on a DV port group/VLAN with its MTU. Multi-rack uses rack-local subnets for the same service. Prove paths with do-not-fragment vmkping sized to the target MTU, including across racks.",
+        "why": "Separation lets vSAN/overlay keep jumbo/latency behavior without poisoning management. “Configured” ≠ “working” until cross-rack DF pings pass.",
         "source": "https://techdocs.broadcom.com/us/en/vmware-cis/vcf/vcf-9-0-and-later/9-1/design/design-library/datacenter-network-requirements/network-fabric-design/multi-rack-availability.html",
-        "examTip": "Expect a validation question. The correct answer for proving overlay readiness is a do-not-fragment ping between TEPs at the target frame size, run across racks, not a configuration review. Configured does not equal working."
+        "examTip": "Validation question: DF ping between TEPs across racks — not a config screenshot review."
       }
     ],
     "keyFacts": [
@@ -151,8 +162,17 @@
         "rationale": "New hardware gives a clean, fully supported foundation that meets VCF 9 requirements without carrying forward the constraints, firmware levels and lifecycle state of the existing estate. It also decouples the build from the production environment, so the management domain can be stood up and validated while existing workloads continue to run, which is what makes a staged migration possible.",
         "alternative": "Converging or upgrading existing hardware in place was rejected because it couples the new platform's timeline to the old estate's maintenance windows, inherits unvalidated firmware and compatibility state, and removes the ability to fall back to the current environment during migration.",
         "amprsImpact": "Availability improves because the build has no impact on running production. Manageability improves through a single consistent hardware and software baseline. Recoverability improves because the existing environment remains as a fallback throughout the migration. Cost increases, and the estate is temporarily dual-running.",
-        "traceability": ["BR05", "C02", "A02"],
-        "relatedComponents": ["Layer 3 Spine-Leaf Underlay", "NSX"]
+        "traceability": [
+          "BR05",
+          "C02",
+          "A02"
+        ],
+        "relatedComponents": [
+          "Layer 3 Spine-Leaf Underlay",
+          "NSX"
+        ],
+        "title": "DD-401: Should the VCF 9 management domain be deployed on the newly acquired hardware, or should existing hardware …",
+        "decisionRule": "If Phase 1 needs a clean control plane and existing hosts are memory-stressed, near EOL, or tied to EOL storage, choose new hardware for the management domain. Only reuse existing hosts when capacity, support, storage model and migration risk are proven acceptable."
       },
       {
         "id": "DD-402",
@@ -162,8 +182,17 @@
         "rationale": "The existing fabric is a constraint (C02) and it is already the topology Broadcom recommends for VCF. The requirement is therefore not to redesign it but to prove it: confirm MTU of at least 1600 and preferably 1700 or 9000 across every hop including the spine and any intermediate Layer 3 device, confirm per-rack VLANs and subnets with highly available gateways, and confirm BGP peering capability for NSX Edge uplinks.",
         "alternative": "A fabric redesign or a Layer 2 stretched design was rejected because C02 constrains the network, a redesign adds cost, risk and schedule with no requirement driving it, and large stretched Layer 2 domains are the topology VCF's overlay exists to avoid.",
         "amprsImpact": "Manageability and cost benefit from reusing a known fabric and skill set. Performance and availability are conditional on the validation passing, which is why confidence is medium-high rather than high: an unvalidated MTU path is an open risk. Security is unchanged.",
-        "traceability": ["C02", "BR05"],
-        "relatedComponents": ["Layer 3 Spine-Leaf Underlay", "VXLAN and Geneve Overlay", "VMkernel Networks"]
+        "traceability": [
+          "C02",
+          "BR05"
+        ],
+        "relatedComponents": [
+          "Layer 3 Spine-Leaf Underlay",
+          "VXLAN and Geneve Overlay",
+          "VMkernel Networks"
+        ],
+        "title": "DD-402: Should the existing Layer 3 spine-leaf underlay be retained for VCF 9, or should the fabric be redesigned?",
+        "decisionRule": "If an existing fabric is a constraint and already matches Broadcom's L3 spine-leaf model, retain it and validate overlay readiness (MTU, routing, TEPs). Redesign the fabric only when evidence shows it cannot carry the overlay."
       },
       {
         "id": "DD-403",
@@ -173,8 +202,17 @@
         "rationale": "Multi-rack distributes a cluster's hosts across racks so that the loss of a rack does not take the cluster down, and it allows horizontal growth beyond a single rack's capacity. Both benefits depend entirely on rack independence, which is a facilities fact that must be validated rather than assumed.",
         "alternative": "A single-rack model was not rejected outright; it remains correct where the cluster fits in one rack, where rack independence cannot be demonstrated, or where the additional per-rack VLAN, subnet and gateway management is not justified.",
         "amprsImpact": "Availability improves materially if the racks are truly independent, and not at all if they share a power feed or upstream switch. Manageability degrades because of per-rack subnets, TEP VLANs and gateway redundancy. Performance is broadly neutral, though inter-rack traffic now traverses the spine.",
-        "traceability": ["BR05", "C02"],
-        "relatedComponents": ["Layer 3 Spine-Leaf Underlay", "VMkernel Networks", "NSX"]
+        "traceability": [
+          "BR05",
+          "C02"
+        ],
+        "relatedComponents": [
+          "Layer 3 Spine-Leaf Underlay",
+          "VMkernel Networks",
+          "NSX"
+        ],
+        "title": "DD-403: Should clusters use a multi-rack Layer 3 cluster model or a single-rack cluster model?",
+        "decisionRule": "Choose multi-rack only when racks are independent power/cooling/network domains and the team can operate per-rack subnets/TEPs. Otherwise single-rack is the correct Phase 1 answer."
       }
     ],
     "vcf91Updates": [
@@ -183,6 +221,17 @@
         "description": "VCF 9.1 introduces Distributed Transit Gateway with EVPN-VXLAN connectivity, allowing workloads to integrate directly with EVPN-VXLAN fabrics using BGP EVPN and VXLAN without centralised gateway appliances in the traffic path. The BGP EVPN control-plane relationship is held by the VCF Route Controller peering with the fabric's EVPN border gateways, and forwarding is distributed closer to the workload. Broadcom announced validated interoperability with Arista's Universal Cloud Network as the first ecosystem integration.",
         "impact": "Where the customer's fabric already runs EVPN-VXLAN, this removes the centralised Edge appliance from the north-south data path, which changes Edge cluster sizing and placement decisions and improves scale and performance. It does not change the MTU validation obligation or the per-rack VLAN design in a Layer 3 multi-rack model, and it makes the state of the customer's fabric control plane a design input worth discovering explicitly."
       }
+    ],
+    "lesson": {
+      "goal": "After this module you can explain underlay vs overlay without notes, prove MTU correctly, and apply rack/fabric decision rules to new evidence — not recite DD-402 = B.",
+      "what": "VCF networking has two layers: (1) physical L3 spine-leaf underlay that carries IP between hosts/racks, and (2) NSX Geneve overlay that creates logical workload networks on top via host TEPs, sitting on a VDS with VMkernel adapters for each traffic type.",
+      "how": "Hosts dual-home to ToR leaves → VLANs trunk per traffic type → VCF builds VDS + VMkernel (mgmt, vMotion, vSAN, TEP) → NSX prepares transport nodes → TEPs encapsulate/decapsulate Geneve across the underlay. MTU must match everywhere (physical, VDS, VMkernel, NSX TEP). Prove with do-not-fragment vmkping between TEPs across racks.",
+      "why": "Best practice: keep an existing L3 fabric when it is a constraint (C02) and validate overlay readiness; treat 9 Gbps on 10 Gb as no headroom; multi-rack only if racks are independent failure domains; never skip MTU validation. Overlay enables VPC/Supervisor self-service that VLANs alone cannot."
+    },
+    "checkYourself": [
+      "What stays physical (underlay) and what becomes overlay?",
+      "Why is 9 Gbps peak on dual 10 Gb links a warning?",
+      "How do you prove MTU readiness — and why is a config review not enough?"
     ]
   },
   {
@@ -261,8 +310,17 @@
         "rationale": "vSAN ESA is the principal storage model for VCF 9 and is delivered on the new all-NVMe ReadyNode hardware, giving the management domain policy-driven resilience with space-efficient erasure coding and no dependency on the end-of-life Fibre Channel SAN. It also keeps the management domain self-contained, so the platform's own control plane does not depend on external storage availability.",
         "alternative": "Retaining the existing 8 Gbps Fibre Channel SAN was rejected because it is end of life and would tie the new platform's lifecycle and availability to hardware scheduled for retirement. vSAN OSA was rejected because the new hardware is all-NVMe, so OSA would forgo ESA's performance and space efficiency for no benefit.",
         "amprsImpact": "Availability and recoverability improve by removing the external SAN as a dependency of the management plane. Performance improves through all-NVMe single-tier ESA. Manageability improves because storage becomes policy-driven and lifecycle-managed with the platform. Security is unchanged, with encryption available through policy.",
-        "traceability": ["BR05", "C02"],
-        "relatedComponents": ["vSAN Express Storage Architecture (ESA)", "Storage Policy Based Management (SPBM)", "vSAN ReadyNode and the Compatibility Guide"]
+        "traceability": [
+          "BR05",
+          "C02"
+        ],
+        "relatedComponents": [
+          "vSAN Express Storage Architecture (ESA)",
+          "Storage Policy Based Management (SPBM)",
+          "vSAN ReadyNode and the Compatibility Guide"
+        ],
+        "title": "DD-501: Which storage model should the VCF 9 management domain use?",
+        "decisionRule": "Management-domain bring-up is vSAN-based. On new NVMe-era hardware choose ESA. External FC/NFS belong in workload-domain designs when justified — not as the initial management datastore."
       },
       {
         "id": "DD-502",
@@ -272,8 +330,18 @@
         "rationale": "ESA gives the development domain a scale-out, policy-driven datastore that can serve differentiated service levels from a single cluster, so development, test and shared services can each carry an appropriate FTT and placement scheme. It also aligns the workload domain with the management domain on a single storage architecture, which keeps operational practice and lifecycle uniform, and it retires the dependency on the end-of-life SAN.",
         "alternative": "Continuing to consume the existing Fibre Channel SAN was rejected on end-of-life and 8 Gbps bandwidth grounds. A separate external array was rejected because it reintroduces a second storage lifecycle, a second skill set and a second failure domain with no requirement driving it.",
         "amprsImpact": "Performance and scalability improve on all-NVMe ESA with headroom to grow by adding hosts. Manageability improves through one storage architecture across domains and per-workload policy instead of datastore tiers. Availability depends on the FTT policy chosen, which is deliberately deferred to DD-705. Cost is sensitive to that FTT choice because capacity overhead varies from 1.25x to 3x.",
-        "traceability": ["BR05", "A02", "C02"],
-        "relatedComponents": ["vSAN Express Storage Architecture (ESA)", "Storage Policy and Failures To Tolerate (FTT)", "Storage Policy Based Management (SPBM)"]
+        "traceability": [
+          "BR05",
+          "A02",
+          "C02"
+        ],
+        "relatedComponents": [
+          "vSAN Express Storage Architecture (ESA)",
+          "Storage Policy and Failures To Tolerate (FTT)",
+          "Storage Policy Based Management (SPBM)"
+        ],
+        "title": "DD-502: Which storage model should the development workload domain use?",
+        "decisionRule": "For a new development workload domain, prefer vSAN ESA when retiring EOL arrays and needing scale-out SPBM. Keep supported FC only when lifecycle/performance/cost evidence favors it — the EOL RFS array does not."
       }
     ],
     "vcf91Updates": [
@@ -297,6 +365,17 @@
         "description": "Virtual Volumes are deprecated in VCF 9.1 and will be removed in a future release, with migration to vSAN, NFS or Fibre Channel advised on the same timeline as the upgrade.",
         "impact": "Any design that would have used vVols as a transitional storage model must instead plan a migration path, which reinforces vSAN ESA as the target storage model for both the management and workload domains."
       }
+    ],
+    "lesson": {
+      "what": "Storage in VCF 9 centres on vSAN, with ESA (single-tier all-NVMe) as the modern default and OSA (cache+capacity disk groups) as the legacy option. SPBM applies Failures to Tolerate and placement per VM/disk.",
+      "how": "Build ESA ReadyNodes, create the vSAN datastore, attach SPBM policies (FTT + mirroring or erasure coding). Capacity = consumed data × policy overhead × growth/reserve. ESA RAID-5 adapts (2+1 below six hosts, 4+1 at six+). Management domain bring-up is vSAN-backed.",
+      "why": "Best practice for RFS: vSAN ESA for management and development domains; retire the EOL FC SAN; never size from consumed TB alone; run at least one host above the policy minimum; HCL/ReadyNode proves supportability, not fitness.",
+      "goal": "After this module you should explain the mechanism without notes, then defend each design choice from evidence — not from a memorized letter."
+    },
+    "checkYourself": [
+      "Why is management-domain FC a weak answer here?",
+      "What does SPBM change about storage design?",
+      "Name the factors that turn consumed TB into required raw capacity."
     ]
   },
   {
@@ -384,8 +463,18 @@
         "rationale": "The management domain is the foundation for the entire instance and, as the first instance, for the fleet's shared services. Building it on new, fully compatible all-NVMe hardware gives a supported baseline that meets VCF 9 requirements, isolates the build from the running production estate, and avoids inheriting the firmware and lifecycle state of hardware due for retirement.",
         "alternative": "Reusing or converging existing hardware for the management domain was rejected because it would couple the platform's foundation to end-of-life equipment and to the existing environment's maintenance windows, and would remove the ability to fall back during migration.",
         "amprsImpact": "Availability improves because the foundation is new and validated and the build does not disturb production. Manageability improves via a single consistent baseline. Recoverability improves because the legacy environment remains available as a fallback. Cost increases and there is a temporary dual-running period.",
-        "traceability": ["BR05", "C02", "A02"],
-        "relatedComponents": ["VCF Private Cloud Hierarchy", "SDDC Manager", "vSAN ReadyNode and the Compatibility Guide"]
+        "traceability": [
+          "BR05",
+          "C02",
+          "A02"
+        ],
+        "relatedComponents": [
+          "VCF Private Cloud Hierarchy",
+          "SDDC Manager",
+          "vSAN ReadyNode and the Compatibility Guide"
+        ],
+        "title": "DD-601: Should the management domain be built on the newly acquired hardware?",
+        "decisionRule": "Reconfirm new hardware after appliance/storage/workload capacity is known. In-place conversion only if support, capacity, storage, networking and migration risks stay acceptable."
       },
       {
         "id": "DD-602",
@@ -395,8 +484,16 @@
         "rationale": "The estate is a single site and no second independent availability zone has been validated for latency, power and network independence or witness placement. A single-site centralised management model gives the lowest operational complexity, consistent management across all domains and instances, and satisfies the stated requirements. It also keeps the fleet components in a low-latency, high-bandwidth segment close to everything they manage.",
         "alternative": "Multi-availability-zone and multi-region blueprints were rejected because no requirement calls for surviving a site loss at the management plane, the second-site facts required to support them are unvalidated, and they impose additional manual configuration, latency constraints and ongoing operational cost.",
         "amprsImpact": "Manageability and cost benefit strongly from a single centralised management plane. Availability and recoverability are bounded: a site-level event affects the whole fleet, which must be recorded as an accepted risk with backup and restore as the mitigation. Performance benefits from low latency between fleet components and managed objects.",
-        "traceability": ["BR05", "C02"],
-        "relatedComponents": ["Fleet Blueprint and Deployment Models", "VCF Private Cloud Hierarchy"]
+        "traceability": [
+          "BR05",
+          "C02"
+        ],
+        "relatedComponents": [
+          "Fleet Blueprint and Deployment Models",
+          "VCF Private Cloud Hierarchy"
+        ],
+        "title": "DD-602: What fleet deployment model should be used?",
+        "decisionRule": "Phase 1 single site + future production ⇒ single-site fleet with full management footprint, not minimal footprint and not multi-site unless site resilience is in scope."
       },
       {
         "id": "DD-603",
@@ -406,8 +503,17 @@
         "rationale": "High availability mode gives data redundancy and rapid recovery from a single node failure for the fleet's shared services, rather than relying on a vSphere HA restart with an associated service interruption. Because the fleet components in the first instance serve the whole estate, an outage of VCF Operations or the identity broker stops monitoring, automation, lifecycle and authentication work across every domain, which is a disproportionate operational impact for a single appliance failure.",
         "alternative": "The default single-appliance model relying on vSphere HA was rejected for the fleet components because it accepts a service interruption on every host or appliance failure. It remains defensible where the customer explicitly accepts management-plane downtime and wants the smaller footprint, which is why confidence is medium-high rather than high.",
         "amprsImpact": "Availability of the management plane improves substantially. Recoverability improves through node-level redundancy. Manageability is mixed: fewer outages to handle, but more appliances, more certificate subject alternative names, an optional external load balancer and post-deployment anti-affinity configuration. Performance is neutral. Cost and resource consumption in the management domain increase.",
-        "traceability": ["BR05", "C02"],
-        "relatedComponents": ["High Availability Appliance Mode", "VCF Identity Broker", "SDDC Manager"]
+        "traceability": [
+          "BR05",
+          "C02"
+        ],
+        "relatedComponents": [
+          "High Availability Appliance Mode",
+          "VCF Identity Broker",
+          "SDDC Manager"
+        ],
+        "title": "DD-603: Should the VCF management components be deployed in high availability mode?",
+        "decisionRule": "If hardware-failure tolerance and future production matter, choose HA appliance mode and budget the extra nodes. Simple mode is for temporary labs."
       },
       {
         "id": "DD-604",
@@ -417,8 +523,16 @@
         "rationale": "vSAN ESA on the new all-NVMe ReadyNodes keeps the management plane's storage self-contained, policy-driven and lifecycle-managed with the platform, and removes any dependency on the end-of-life Fibre Channel SAN. Space-efficient erasure coding delivers the required resilience without mirroring's capacity overhead.",
         "alternative": "External Fibre Channel storage was rejected because it is end of life and would make the platform's own control plane dependent on retiring hardware. vSAN OSA was rejected because the hardware is all-NVMe and OSA would forgo ESA's performance and efficiency.",
         "amprsImpact": "Availability and recoverability improve by eliminating an external storage dependency for the management plane. Performance improves on single-tier NVMe. Manageability improves through one storage architecture and policy model. Security is unchanged, with encryption available via policy.",
-        "traceability": ["BR05", "C02"],
-        "relatedComponents": ["vSAN Express Storage Architecture (ESA)", "Storage Policy Based Management (SPBM)"]
+        "traceability": [
+          "BR05",
+          "C02"
+        ],
+        "relatedComponents": [
+          "vSAN Express Storage Architecture (ESA)",
+          "Storage Policy Based Management (SPBM)"
+        ],
+        "title": "DD-604: Which storage model should the management domain cluster use?",
+        "decisionRule": "Management domain storage follows the integrated vSAN model; ESA on certified hosts for new NVMe hardware."
       },
       {
         "id": "DD-605",
@@ -428,8 +542,17 @@
         "rationale": "Distributing the management cluster's hosts across independent racks means a rack-level failure does not take the management plane down, which complements the high availability appliance decision. The benefit is entirely contingent on rack independence, and Broadcom's guidance notes the single-rack model is supported for management domains, so the multi-rack complexity must be earned by a real facilities fact.",
         "alternative": "A single-rack management cluster was not rejected outright; it is the correct answer where the cluster fits in one rack and rack independence cannot be demonstrated, and it avoids per-rack subnets, TEP VLANs and gateway redundancy.",
         "amprsImpact": "Availability improves only if rack independence is genuine. Manageability degrades through additional per-rack network configuration and IP management. Performance is broadly neutral, with inter-rack traffic traversing the spine. Cost rises modestly.",
-        "traceability": ["C02", "BR05"],
-        "relatedComponents": ["Layer 3 Spine-Leaf Underlay", "VMkernel Networks", "High Availability Appliance Mode"]
+        "traceability": [
+          "C02",
+          "BR05"
+        ],
+        "relatedComponents": [
+          "Layer 3 Spine-Leaf Underlay",
+          "VMkernel Networks",
+          "High Availability Appliance Mode"
+        ],
+        "title": "DD-605: Should the management domain cluster use a Layer 3 multi-rack model or a single-rack model?",
+        "decisionRule": "Use L3 multi-rack only after validating rack independence and ops readiness; otherwise start single-rack. Stretched cluster is a different failure-scope decision."
       },
       {
         "id": "DD-606",
@@ -439,8 +562,17 @@
         "rationale": "A single VDS with distinct VLANs and port groups per traffic type already provides logical separation, independent MTU and teaming policy, and is significantly simpler to operate and lifecycle. Physical separation onto a second VDS only pays for itself when uplink bandwidth is genuinely contended or when a security or compliance requirement demands separate physical paths for storage.",
         "alternative": "A dedicated storage VDS was rejected as the default because it consumes additional uplinks and host NIC ports, doubles switch configuration surface, and delivers isolation the customer has not required. It should be revisited if bandwidth measurement shows contention, which is a live concern given the observed 9 Gbps peak on 10 Gb links.",
         "amprsImpact": "Manageability improves with one switch object and one configuration surface. Performance is adequate provided uplink bandwidth is sized with headroom, and is the risk that would reverse this decision. Availability is unchanged given redundant uplinks. Security relies on VLAN separation rather than physical separation. Cost is lower.",
-        "traceability": ["C02", "BR05"],
-        "relatedComponents": ["vSphere Distributed Switch (VDS)", "VMkernel Networks", "vSAN Express Storage Architecture (ESA)"]
+        "traceability": [
+          "C02",
+          "BR05"
+        ],
+        "relatedComponents": [
+          "vSphere Distributed Switch (VDS)",
+          "VMkernel Networks",
+          "vSAN Express Storage Architecture (ESA)"
+        ],
+        "title": "DD-606: Should storage traffic be separated onto its own vSphere Distributed Switch, or should a single VDS carry a…",
+        "decisionRule": "Prefer storage/workload VDS separation when dedicated uplinks exist; otherwise one VDS with high-speed redundant uplinks + NIOC. Bandwidth headroom decides, not diagram aesthetics."
       },
       {
         "id": "DD-607",
@@ -450,8 +582,16 @@
         "rationale": "Appliance mode deploys a three-node cluster with an internal load balancer that tolerates a single node failure, can serve up to five VCF instances, and does not depend on the management domain vCenter being available for authentication. Federating to the enterprise identity provider keeps account lifecycle, multi-factor authentication and password policy under existing security governance, and gives one consistent single sign-on and role-based access control experience across VCF Operations, VCF Automation and vCenter.",
         "alternative": "The embedded identity broker in management domain vCenter was rejected because it creates a single point of failure for authentication and is guided as one per instance. Per-component local accounts were rejected outright because they defeat centralised access control, auditability and enterprise password policy.",
         "amprsImpact": "Security improves substantially through central identity, enterprise policy enforcement and auditability. Availability of authentication improves via the three-node cluster. Manageability improves through one access-control model, at the cost of additional appliances to lifecycle. Performance is neutral.",
-        "traceability": ["BR05", "C02"],
-        "relatedComponents": ["VCF Identity Broker", "VCF Private Cloud Hierarchy"]
+        "traceability": [
+          "BR05",
+          "C02"
+        ],
+        "relatedComponents": [
+          "VCF Identity Broker",
+          "VCF Private Cloud Hierarchy"
+        ],
+        "title": "DD-607: How should authentication and single sign-on be provided across the fleet?",
+        "decisionRule": "Fleet-wide SSO ⇒ external Identity Broker appliance. Embedded broker is weaker for multi-component fleet identity."
       },
       {
         "id": "DD-608",
@@ -461,8 +601,16 @@
         "rationale": "The environment is subject to public key infrastructure governance and compliance obligations, which require certificates that chain to a trusted enterprise root with defined issuance, key strength, validity, revocation and audit processes. Using the enterprise authority means clients, browsers and integrations already trust the chain, and certificate lifecycle stays inside the existing security process.",
         "alternative": "VMCA as the root was rejected because it is a self-contained authority every client must be explicitly taught to trust and it sits outside enterprise certificate governance and revocation, which does not satisfy the compliance requirement. VMCA as a subordinate of the enterprise authority is an acceptable variant where the enterprise process permits it.",
         "amprsImpact": "Security and compliance improve materially. Manageability is mixed: trust is inherited automatically, but certificate signing requests, subject alternative name management and renewal become an ongoing operational task tied to the enterprise process. Availability carries a new risk if certificates expire unnoticed, so renewal monitoring becomes a day-two requirement.",
-        "traceability": ["BR05", "C02"],
-        "relatedComponents": ["VMCA and External Certificate Authority", "High Availability Appliance Mode"]
+        "traceability": [
+          "BR05",
+          "C02"
+        ],
+        "relatedComponents": [
+          "VMCA and External Certificate Authority",
+          "High Availability Appliance Mode"
+        ],
+        "title": "DD-608: Should platform certificates be issued by VMCA or by an external enterprise certificate authority?",
+        "decisionRule": "Enterprise trust/PCI ownership ⇒ external CA. Do not treat VMCA as an unsupported intermediate enterprise root."
       }
     ],
     "vcf91Updates": [
@@ -486,6 +634,17 @@
         "description": "A single instance can now manage up to 5000 ESX hosts, doubled from 2500 in VCF 9.0, and parallel patching capacity rises from 64 to 256 clusters upgraded concurrently. VCF 9.1 also adds fleet-wide policy enforcement with configuration drift visibility, and upgrade pre-checks that evaluate system health and resource capacity before an upgrade runs.",
         "impact": "Fleet and instance boundary decisions such as DD-602 can be driven by operational and latency considerations rather than by scale ceilings, and maintenance window sizing improves substantially, which weakens one of the historical arguments for splitting an estate across multiple fleets."
       }
+    ],
+    "lesson": {
+      "what": "The management domain is the VCF control plane: private cloud → fleet → instance → management domain → clusters/appliances. It hosts SDDC Manager, management vCenter/NSX, Operations/Automation, identity and certificates.",
+      "how": "Bring up management on new vSAN hosts, choose fleet blueprint and Simple vs HA appliance mode, select cluster/VDS model, deploy Identity Broker and CA integration, then size every appliance plus HA/maintenance reserve before locking hardware.",
+      "why": "Best practice for RFS: new hardware (not in-place on stressed Dev hosts); single-site non-minimal fleet; HA mode; vSAN ESA; external Identity Broker and external CA; do not approve old hosts from HCL alone.",
+      "goal": "After this module you should explain the mechanism without notes, then defend each design choice from evidence — not from a memorized letter."
+    },
+    "checkYourself": [
+      "State the VCF hierarchy: private cloud → … → cluster.",
+      "Why does HA mode change sizing?",
+      "Why external Identity Broker + external CA for RFS?"
     ]
   },
   {
@@ -566,8 +725,17 @@
         "rationale": "A dedicated workload domain gives the development platform its own vCenter, its own lifecycle and upgrade cadence, and a failure and resource-contention boundary separate from the management plane and from any other workload class. Building it new and migrating into it also means the existing environment keeps running during the transition and remains available as a fallback, which is what makes a staged, wave-based migration possible.",
         "alternative": "Placing development workloads in the management domain was rejected outright because the management domain does not host user workloads. Upgrading or converging the existing environment in place was rejected because it couples the new platform to the old estate's maintenance windows and hardware lifecycle and removes the fallback position during migration.",
         "amprsImpact": "Availability improves through isolation from the management plane and from other workload classes, and because migration does not disturb the running environment. Manageability is mixed: independent lifecycle and upgrade windows are gained, but an additional vCenter must be operated. Recoverability improves because the source environment remains as a fallback. Cost increases during the dual-running period.",
-        "traceability": ["BR05", "A02", "C02"],
-        "relatedComponents": ["VI Workload Domain", "HCX"]
+        "traceability": [
+          "BR05",
+          "A02",
+          "C02"
+        ],
+        "relatedComponents": [
+          "VI Workload Domain",
+          "HCX"
+        ],
+        "title": "DD-701: Should the development workload be hosted in a new workload domain, or placed into the management domain or…",
+        "decisionRule": "Protect management capacity and avoid lifecycle debt ⇒ new workload domain + migrate. Importing the old cluster only if debt is accepted with eyes open."
       },
       {
         "id": "DD-702",
@@ -577,8 +745,18 @@
         "rationale": "Multi-rack lets a workload cluster survive the loss of a rack and grow horizontally beyond one rack's capacity, which matters given the projected growth to around 600 virtual machines. The Layer 3 model is Broadcom's supported multi-rack approach for workload domains, using per-rack VLANs and subnets with highly available first-hop gateways. The benefit depends entirely on the racks being independent for power, cooling and network.",
         "alternative": "A single-rack cluster model was not rejected outright and remains correct where capacity fits in one rack or rack independence is unproven. A Layer 2 stretched multi-rack approach was rejected because it reintroduces large stretched broadcast domains that the overlay exists to avoid.",
         "amprsImpact": "Availability improves materially if rack independence is genuine and not at all if it is not. Performance is broadly neutral, with inter-rack traffic traversing the spine. Manageability degrades through per-rack subnet, TEP VLAN and gateway management, and the Edge cluster must adopt the matching rack-fault-tolerant model. Cost rises modestly.",
-        "traceability": ["C02", "BR05", "A02"],
-        "relatedComponents": ["Layer 3 Spine-Leaf Underlay", "VI Workload Domain", "NSX Edge Cluster"]
+        "traceability": [
+          "C02",
+          "BR05",
+          "A02"
+        ],
+        "relatedComponents": [
+          "Layer 3 Spine-Leaf Underlay",
+          "VI Workload Domain",
+          "NSX Edge Cluster"
+        ],
+        "title": "DD-702: Should the workload domain clusters use the Layer 3 multi-rack model?",
+        "decisionRule": "Prefer L3 multi-rack for growth/rack resilience when independence is real; single-rack when Phase 1 speed/simplicity wins."
       },
       {
         "id": "DD-703",
@@ -588,8 +766,18 @@
         "rationale": "ESA on all-NVMe ReadyNodes gives the workload domain a scale-out datastore whose service levels are set per workload through SPBM, so a single cluster can serve differentiated resilience and space-efficiency requirements. It retires the dependency on the end-of-life 8 Gbps Fibre Channel SAN and matches the management domain's storage architecture, keeping one operational model across the instance.",
         "alternative": "Continuing on the existing Fibre Channel SAN was rejected on end-of-life and bandwidth grounds. vSAN OSA was rejected because the hardware is all-NVMe and OSA forgoes ESA's erasure-coding performance, adaptive RAID-5 and 9.1 efficiency features. A new external array was rejected as an unnecessary second storage lifecycle and failure domain.",
         "amprsImpact": "Performance improves on single-tier NVMe with erasure coding at mirroring-like performance. Manageability improves via one storage architecture and per-workload policy rather than datastore tiers. Availability depends on the FTT policy set in DD-705. Cost is driven by the capacity overhead of that policy choice.",
-        "traceability": ["BR05", "C02", "A02"],
-        "relatedComponents": ["vSAN Express Storage Architecture (ESA)", "Storage Policy Based Management (SPBM)", "Storage Policy and Failures To Tolerate (FTT)"]
+        "traceability": [
+          "BR05",
+          "C02",
+          "A02"
+        ],
+        "relatedComponents": [
+          "vSAN Express Storage Architecture (ESA)",
+          "Storage Policy Based Management (SPBM)",
+          "Storage Policy and Failures To Tolerate (FTT)"
+        ],
+        "title": "DD-703: Which storage architecture should the workload domain clusters use?",
+        "decisionRule": "New hardware + EOL SAN + SPBM scale-out ⇒ vSAN ESA for the workload domain unless evidence forces supported FC/NFS."
       },
       {
         "id": "DD-704",
@@ -599,8 +787,17 @@
         "rationale": "Distinct VLANs and port groups on one VDS already give logical separation with independent MTU and teaming policy, and one switch object is materially simpler to operate and lifecycle. Physical separation earns its cost only when uplink bandwidth is genuinely contended or a compliance requirement demands separate physical paths, neither of which is currently a stated requirement.",
         "alternative": "A dedicated storage VDS was rejected as the default because it consumes additional host NIC ports and uplinks and doubles the switch configuration surface. It stays on the table because the observed 9 Gbps peak on 10 Gb links shows the uplinks already run close to capacity, so bandwidth measurement after migration may reverse this decision.",
         "amprsImpact": "Manageability improves with one configuration surface. Performance is the risk: vSAN traffic now shares uplinks with workload traffic, so headroom must be verified. Availability is unchanged with redundant uplinks. Security relies on VLAN rather than physical separation. Cost is lower.",
-        "traceability": ["C02", "BR05"],
-        "relatedComponents": ["vSphere Distributed Switch (VDS)", "VMkernel Networks", "vSAN Express Storage Architecture (ESA)"]
+        "traceability": [
+          "C02",
+          "BR05"
+        ],
+        "relatedComponents": [
+          "vSphere Distributed Switch (VDS)",
+          "VMkernel Networks",
+          "vSAN Express Storage Architecture (ESA)"
+        ],
+        "title": "DD-704: Should storage traffic and workload traffic be separated onto different vSphere Distributed Switches in the…",
+        "decisionRule": "Separate storage and workload VDS/uplinks when physical paths exist; single VDS is the simpler fallback."
       },
       {
         "id": "DD-705",
@@ -610,8 +807,17 @@
         "rationale": "In ESA, erasure coding performs at mirroring-like levels, so RAID-5 gives the same effective performance at 1.25x to 1.5x capacity overhead instead of mirroring's 2x. FTT=1 is proportionate for a development platform, and SPBM allows any individual workload that needs more resilience to be given FTT=2 RAID-6 without changing the cluster. Running one host above the policy minimum (four hosts for FTT=1 RAID-5) means resilience can be restored during a failure or maintenance window.",
         "alternative": "RAID-1 mirroring was rejected because in ESA it buys no meaningful performance advantage and doubles capacity consumption; Broadcom reserves it for stretched-cluster site resilience and two-node host resilience. FTT=2 as the default was rejected as disproportionate for development workloads, though it remains available per workload through policy. Confidence is medium because the choice depends on the capacity and IOPS evidence still being validated and, in 9.1, on whether Auto-RAID is adopted.",
         "amprsImpact": "Cost and usable capacity improve substantially versus mirroring. Availability is set deliberately at single-failure tolerance, which is the accepted risk for a development platform. Performance is equivalent to mirroring in ESA. Manageability improves because one default policy plus targeted exceptions is simpler than multiple datastore tiers.",
-        "traceability": ["BR05", "A02"],
-        "relatedComponents": ["Storage Policy and Failures To Tolerate (FTT)", "vSAN Express Storage Architecture (ESA)", "Storage Policy Based Management (SPBM)"]
+        "traceability": [
+          "BR05",
+          "A02"
+        ],
+        "relatedComponents": [
+          "Storage Policy and Failures To Tolerate (FTT)",
+          "vSAN Express Storage Architecture (ESA)",
+          "Storage Policy Based Management (SPBM)"
+        ],
+        "title": "DD-705: What failures-to-tolerate policy and data placement scheme should the development workloads use: mirroring …",
+        "decisionRule": "Standard cluster (no site disaster tolerance) + at least one-host failure protection. Choose mirroring for performance or erasure coding for capacity after sizing host count and overhead."
       },
       {
         "id": "DD-706",
@@ -621,8 +827,17 @@
         "rationale": "VPC is the default and recommended Supervisor workload network in VCF 9 and the prerequisite for VCF Automation All Apps organizations. It gives each tenant an isolated, self-service network with its own address space, subnets, routing and outbound network address translation, provisioned declaratively through Kubernetes custom resources by the NSX Container Plugin, inside guardrails the provider sets. That is exactly what a self-service development platform requires.",
         "alternative": "VDS-backed and NSX classic Tier-0/Tier-1 segment networking are supported but were rejected because they do not unlock the full VCF 9 capability set and they leave network provisioning as a ticket to the network team, defeating the self-service requirement.",
         "amprsImpact": "Manageability improves markedly through declarative, tenant-driven networking instead of manual VLAN and segment provisioning. Security improves through per-tenant network isolation and distributed policy. Performance is neutral. Availability depends on the underlying NSX and Edge design. Manageability also carries a new burden: address space and IP block planning per organisation and VPC.",
-        "traceability": ["BR05", "C02"],
-        "relatedComponents": ["VPC Networking", "NSX", "NSX Edge Cluster"]
+        "traceability": [
+          "BR05",
+          "C02"
+        ],
+        "relatedComponents": [
+          "VPC Networking",
+          "NSX",
+          "NSX Edge Cluster"
+        ],
+        "title": "DD-706: Which workload network model should the workload domain use?",
+        "decisionRule": "Tenant self-service across domains ⇒ VPC network virtualization. VLAN-only is weaker for Automation-driven consumption."
       },
       {
         "id": "DD-707",
@@ -632,8 +847,17 @@
         "rationale": "All north-south traffic and all centralised services for the domain pass through the Edge cluster, so its bandwidth demands, failure behaviour and upgrade cadence are different from those of tenant workloads. Dedicating it isolates Edge lifecycle and failure from the workloads and makes north-south bandwidth predictable and independently sizeable. Where the multi-rack Layer 3 cluster model is used, the matching rack-fault-tolerant Edge cluster model applies.",
         "alternative": "A collapsed Edge sharing workload hosts was rejected as the default because it couples Edge upgrades and traffic bursts to tenant workloads and makes resource contention hard to reason about. It remains defensible in small environments where the additional hosts cannot be justified, which is why confidence is medium-high rather than high.",
         "amprsImpact": "Availability improves through failure-domain separation. Manageability improves through independent Edge lifecycle, at the cost of more hosts and another cluster to operate. Performance improves through predictable, dedicated north-south capacity. Cost increases. In 9.1 the distributed EVPN-VXLAN option can reduce the centralised Edge's role in the data path, which should be evaluated before finalising node sizing.",
-        "traceability": ["BR05", "C02"],
-        "relatedComponents": ["NSX Edge Cluster", "VPC Networking", "Layer 3 Spine-Leaf Underlay"]
+        "traceability": [
+          "BR05",
+          "C02"
+        ],
+        "relatedComponents": [
+          "NSX Edge Cluster",
+          "VPC Networking",
+          "Layer 3 Spine-Leaf Underlay"
+        ],
+        "title": "DD-707: Where should the NSX Edge cluster be placed for the workload domain?",
+        "decisionRule": "Production-ready north-south isolation ⇒ dedicated Edge cluster. Collapsed Edge is a Phase 1 cost exception."
       },
       {
         "id": "DD-708",
@@ -643,8 +867,17 @@
         "rationale": "The platform cannot infer application-level redundancy or licensing and hardware boundaries, so placement policy has to be stated explicitly. Host groups express the boundary (rack, availability zone, licence-restricted or GPU-equipped hosts) while anti-affinity ensures the redundant members of an application do not share a host and therefore a single failure. Preferential 'should' rules are the default so that HA can still restart workloads during a failure, with 'must' reserved for genuinely absolute constraints such as licensing.",
         "alternative": "Relying on DRS defaults alone was rejected because DRS optimises for balance and will happily consolidate redundant application members onto one host, silently converting application redundancy into a single point of failure. Using only 'must' rules was rejected because a hard rule that HA cannot satisfy leaves virtual machines powered off.",
         "amprsImpact": "Availability improves because application redundancy survives a host failure. Manageability requires ongoing rule hygiene, since rules are cluster-scoped and group membership is lost if a virtual machine leaves the cluster. Performance is broadly neutral, though rules constrain DRS's balancing freedom. Cluster host count must be sufficient to satisfy the rules.",
-        "traceability": ["BR05", "A02"],
-        "relatedComponents": ["DRS VM and Host Groups", "Anti-Affinity Rules", "VI Workload Domain"]
+        "traceability": [
+          "BR05",
+          "A02"
+        ],
+        "relatedComponents": [
+          "DRS VM and Host Groups",
+          "Anti-Affinity Rules",
+          "VI Workload Domain"
+        ],
+        "title": "DD-708: How should workload placement be controlled within the workload domain clusters?",
+        "decisionRule": "Redundant Edges need VM/Host groups to define eligible hosts AND anti-affinity so nodes do not share a host/failure domain."
       }
     ],
     "vcf91Updates": [
@@ -668,6 +901,17 @@
         "description": "In VCF 9.1 an environment can run the legacy VM Apps organization model alongside the modern All Apps organization model, and both can share the same vCenter and NSX rather than requiring separate infrastructure.",
         "impact": "A phased adoption path for Supervisor-based consumption becomes viable without duplicating vCenter and NSX, which lowers the cost of the All Apps recommendation in DD-902 and removes an argument for deferring it."
       }
+    ],
+    "lesson": {
+      "what": "A workload domain is the tenant compute/storage/network/lifecycle boundary separate from management. It includes cluster topology, storage policy, VDS model, VPC networking, NSX Edge placement and DRS rules.",
+      "how": "Deploy a new workload domain on new hardware, migrate Dev VMs in waves, apply SPBM, choose VPC networking, place Edges (dedicated vs collapsed), and protect redundant Edges with VM/Host groups plus anti-affinity. Host count is the max of compute, memory, storage policy, IOPS and network needs, plus HA reserve.",
+      "why": "Best practice for RFS: new domain + migrate (do not import lifecycle debt); vSAN ESA; VPC model; dedicated Edge for production-ready design; size from measured active demand, not allocated memory.",
+      "goal": "After this module you should explain the mechanism without notes, then defend each design choice from evidence — not from a memorized letter."
+    },
+    "checkYourself": [
+      "Why separate management capacity from tenant growth?",
+      "What policy controls vSAN protection per workload?",
+      "How do VM/Host groups and anti-affinity work together for Edges?"
     ]
   },
   {
@@ -741,8 +985,19 @@
         "rationale": "A stretched cluster is the only topology that survives a site loss without data loss, but it depends on facts that are currently unvalidated: two genuinely independent failure domains, no more than 5 ms round trip between data sites with at least 10 Gbps of vSAN bandwidth, and an independent third location for the witness at up to 200 ms. Until those are proven, recommending it would be designing on an assumption. Within a single site, vSphere HA plus vSAN FTT policy limits interruption from component and host failure, and backup and recovery covers the loss, corruption and ransomware cases that redundancy cannot.",
         "alternative": "Recommending a stretched cluster unconditionally was rejected because the latency, independence and witness prerequisites are unvalidated and the design would fail if any of them proved false. Relying on high availability alone with no backup capability was rejected because redundancy replicates corruption and deletion and therefore provides no recoverability. Confidence is medium because the recommendation is explicitly conditional on validation results that are still outstanding.",
         "amprsImpact": "Availability is bounded to component and host failure within the single site until a second zone is validated, which must be recorded as an accepted risk. Recoverability is delivered by backup and restore against agreed RTO and RPO targets rather than by site redundancy. Manageability stays substantially lower than a stretched design, which carries witness management, balanced site capacity and API-driven stretch operations. Cost is materially lower. Performance avoids the synchronous cross-site write penalty.",
-        "traceability": ["BR05", "C02", "A02"],
-        "relatedComponents": ["Stretched Cluster", "High Availability versus Backup and Recovery", "RTO and RPO", "AMPRS Framework"]
+        "traceability": [
+          "BR05",
+          "C02",
+          "A02"
+        ],
+        "relatedComponents": [
+          "Stretched Cluster",
+          "High Availability versus Backup and Recovery",
+          "RTO and RPO",
+          "AMPRS Framework"
+        ],
+        "title": "DD-801: Should a stretched cluster be used to provide site-level availability, or should the design rely on high av…",
+        "decisionRule": "HA appliances + tested backup/restore for single-site. Stretch only if two independent San Jose zones + latency + quorum + ops are validated. Multi-instance DR exceeds Phase 1 scope. Backup ≠ HA."
       }
     ],
     "vcf91Updates": [
@@ -761,6 +1016,17 @@
         "description": "VCF 9.1 introduces NVMe dispersed namespaces, enabling storage partners to validate and support NVMe-based stretched cluster solutions.",
         "impact": "Where a second validated availability zone exists, there are now additional supported stretched topologies beyond vSAN stretched clusters, which broadens the option set to re-evaluate under DD-801 without changing the underlying latency and witness prerequisites."
       }
+    ],
+    "lesson": {
+      "what": "AMPRS is the quality lens on every design choice: Availability, Manageability, Performance, Recoverability, Security. It turns “resilient/secure” into measurable commitments.",
+      "how": "For each decision state the AMPRS benefit and the cost/complexity it creates. Separate local HA from backup/restore from stretched clusters from multi-instance DR — they protect different failure scopes. RTO is recovery time; RPO is acceptable data loss.",
+      "why": "Best practice: backup is recoverability, not instantaneous HA. Recommend stretch only after proving two independent zones, latency, quorum/witness and ops readiness. Multi-instance DR exceeds Phase 1 single-site scope.",
+      "goal": "After this module you should explain the mechanism without notes, then defend each design choice from evidence — not from a memorized letter."
+    },
+    "checkYourself": [
+      "Expand AMPRS from memory.",
+      "Why are HA and backup not interchangeable?",
+      "What must be true before recommending a stretched cluster?"
     ]
   },
   {
@@ -849,8 +1115,16 @@
         "rationale": "There is exactly one VCF Automation instance per fleet and it is the sole path through which tenants consume the platform. Its loss does not stop running workloads but it does stop all self-service provisioning, catalogue access and tenant operations across every organization in the fleet, which is a disproportionate impact for a single appliance failure on a platform whose primary purpose is self-service. Highly available deployment also aligns VCF Automation with the rest of the fleet-level services and, in 9.1, with the shared VCF services runtime on which it is hosted.",
         "alternative": "A single-instance deployment relying on vSphere HA to restart the appliance was rejected because it accepts a self-service outage on every host or appliance failure. It remains defensible where the customer explicitly accepts provisioning downtime and prefers the smaller footprint, which is why confidence is medium-high.",
         "amprsImpact": "Availability of the consumption plane improves substantially. Manageability is mixed: fewer outages but more nodes, more certificate subject alternative names and additional sizing work. Recoverability improves through node redundancy and, in 9.1, unified backup of the shared runtime. Performance is neutral. Cost and management domain resource consumption increase.",
-        "traceability": ["BR05", "C02"],
-        "relatedComponents": ["VCF Automation", "High Availability Appliance Mode"]
+        "traceability": [
+          "BR05",
+          "C02"
+        ],
+        "relatedComponents": [
+          "VCF Automation",
+          "High Availability Appliance Mode"
+        ],
+        "title": "DD-901: Should VCF Automation be deployed in a highly available configuration?",
+        "decisionRule": "Self-service control plane must not be SPOF ⇒ HA VCF Automation."
       },
       {
         "id": "DD-902",
@@ -860,8 +1134,18 @@
         "rationale": "The development platform must deliver both virtual machines and Kubernetes clusters through self-service, and All Apps is the only organization type that does so: it is backed by vSphere Supervisor and vSphere namespaces and exposes the full built-in cloud services catalogue including virtual machines, Kubernetes, networking, volumes, registries, secrets and data services under one quota and identity model. It is also Broadcom's primary multi-tenancy model, so it is the supported target state.",
         "alternative": "A VM Apps organization was rejected because it runs VM-based applications only, cannot deliver VKS, and exists as a transition path for existing Aria Automation users rather than as a target architecture. Only one VM Apps organization is permitted per VCF Automation instance in any case.",
         "amprsImpact": "Manageability improves substantially through one consumption model, one quota model and one identity model for virtual machines and containers. Security improves through organization, project and namespace isolation. Performance is neutral. The dependency created is a hard one: All Apps requires Supervisor with VPC networking, which ties this decision to DD-706.",
-        "traceability": ["BR05", "A02"],
-        "relatedComponents": ["All Apps Organization", "VCF Automation", "vSphere Supervisor and Namespaces", "VPC Networking"]
+        "traceability": [
+          "BR05",
+          "A02"
+        ],
+        "relatedComponents": [
+          "All Apps Organization",
+          "VCF Automation",
+          "vSphere Supervisor and Namespaces",
+          "VPC Networking"
+        ],
+        "title": "DD-902: Which VCF Automation organization type should the development platform use?",
+        "decisionRule": "Need VMs + VKS (+ services) under one org type ⇒ All Apps, not VM Apps only."
       },
       {
         "id": "DD-903",
@@ -871,8 +1155,17 @@
         "rationale": "A namespace is the construct that simultaneously bounds compute and storage quota, assigned networks, storage class access and identity permissions. That makes it the platform's actual security boundary, so trust zones that must not reach each other's workloads, consume each other's quota or share identity grants belong in separate namespaces, each mapped to an appropriate VPC. Separate namespaces also make quota exhaustion and misconfiguration blast radius per-team rather than platform-wide.",
         "alternative": "A single shared namespace with naming conventions and labels for separation was rejected because conventions are not enforcement: quota, network reachability and role bindings would all be shared, so a single misconfiguration or a noisy team would affect every workload in the namespace.",
         "amprsImpact": "Security improves materially through enforced isolation of network, quota and identity per trust zone. Availability improves because quota exhaustion is contained. Manageability is mixed: more namespaces to create and govern, offset in 9.1 by self-service namespace provisioning that inherits registry, ingress, quota and identity from existing VCF constructs. Performance is neutral, though VPC and subnet planning becomes more involved.",
-        "traceability": ["BR05", "C02"],
-        "relatedComponents": ["vSphere Supervisor and Namespaces", "All Apps Organization", "VPC Networking"]
+        "traceability": [
+          "BR05",
+          "C02"
+        ],
+        "relatedComponents": [
+          "vSphere Supervisor and Namespaces",
+          "All Apps Organization",
+          "VPC Networking"
+        ],
+        "title": "DD-903: How should vSphere namespaces be allocated across the development platform's workloads?",
+        "decisionRule": "Distinct authorization/trust boundaries ⇒ separate namespaces. Shared namespace weakens least privilege."
       },
       {
         "id": "DD-904",
@@ -882,8 +1175,17 @@
         "rationale": "Organizations are the top-level tenancy construct and give each tenant a secure and isolated environment in which they can see and consume only what has been allocated to them, with their own portal, identity mapping, quota and catalogue. That is a genuine logical boundary enforced by the platform rather than a naming convention, and it supports secure infrastructure isolation, quotas and chargeback. Projects and namespaces then subdivide the organization for individual teams.",
         "alternative": "Soft tenancy, using one organization with projects alone to separate consumer groups, was rejected because it puts every tenant in the same top-level boundary, sharing catalogue and organization-level administration. Physical tenancy, giving each tenant its own infrastructure, was rejected as disproportionate: it multiplies vCenter, NSX and hardware footprint for isolation that the organization construct already provides. Confidence is medium-high because the correct answer depends on the strength of the customer's separation requirement, and a genuinely regulated tenant may still justify physical separation.",
         "amprsImpact": "Security improves through platform-enforced tenant isolation with per-tenant identity and quota. Manageability improves for tenants (their own portal and catalogue) and increases for the provider (more organizations to govern). Availability and performance are neutral, since tenants still share underlying capacity governed by zone limits and reservations. Cost is far lower than physical tenancy.",
-        "traceability": ["BR05", "C02"],
-        "relatedComponents": ["All Apps Organization", "VCF Automation", "vSphere Supervisor and Namespaces"]
+        "traceability": [
+          "BR05",
+          "C02"
+        ],
+        "relatedComponents": [
+          "All Apps Organization",
+          "VCF Automation",
+          "vSphere Supervisor and Namespaces"
+        ],
+        "title": "DD-904: How hard should the tenancy boundary be between consumer groups?",
+        "decisionRule": "PCI/customer isolation without dedicated hardware for every tenant ⇒ hard logical tenancy with organizations. Physical separation only when contracts/controls demand it."
       },
       {
         "id": "DD-905",
@@ -893,8 +1195,17 @@
         "rationale": "The platform must serve traditional virtual-machine applications and modern container workloads from one self-service interface. VM Service delivers virtual machines declaratively using provider-governed VM classes and content library images; VKS Service delivers conformant Kubernetes guest clusters whose lifecycle the Supervisor manages. Enabling both gives one API, one quota model, one identity model and one storage policy framework across both workload types, which is the manageability outcome the design is aiming for.",
         "alternative": "Enabling VKS Service only was rejected because it leaves virtual machine provisioning outside the self-service model, requiring a parallel process for the majority of existing workloads. Enabling VM Service only was rejected because it cannot deliver the Kubernetes capability the development platform requires.",
         "amprsImpact": "Manageability improves substantially by collapsing two consumption models into one. Security is consistent because both workload types inherit namespace identity, network and storage policy. Performance is neutral, and in 9.1 Fast Deploy materially shortens provisioning time for both. Availability of provisioning depends on the Supervisor and on VCF Automation, linking back to DD-901.",
-        "traceability": ["BR05", "A02"],
-        "relatedComponents": ["VM Service", "vSphere Kubernetes Service (VKS)", "vSphere Supervisor and Namespaces"]
+        "traceability": [
+          "BR05",
+          "A02"
+        ],
+        "relatedComponents": [
+          "VM Service",
+          "vSphere Kubernetes Service (VKS)",
+          "vSphere Supervisor and Namespaces"
+        ],
+        "title": "DD-905: Which Supervisor services should be enabled to satisfy the self-service requirement?",
+        "decisionRule": "Stated use cases need VM Service and VKS Service; publish only required supporting services. Do not publish vSphere Pods unless required."
       },
       {
         "id": "DD-906",
@@ -904,8 +1215,18 @@
         "rationale": "Keeping the consumption plane in one management zone keeps its footprint and operational model simple, while isolating tenant workloads into their own zones means a tenant cannot exhaust the capacity the platform's own services need and gives each workload class an independent capacity and failure domain aligned to the underlying vSphere clusters. Because a Supervisor can span zones, this layout can also be used to give workloads fault tolerance across clusters.",
         "alternative": "A single zone shared by the management plane and all workloads was rejected because tenant capacity demand would then compete with the consumption plane and blast radius would span everything. A separate zone per tenant was rejected as disproportionate at this scale, since organizations, projects and namespaces already provide tenant isolation, and per-tenant zones would fragment capacity. Confidence is medium because the right number of zones depends on cluster topology and growth, which are still being validated.",
         "amprsImpact": "Availability improves through capacity and failure isolation between the consumption plane and workloads. Manageability is mixed: clearer capacity governance, but more zones to map and more region quota to administer. Performance improves through contention isolation. A constraint to respect is that VPCs are region-scoped, so zone and region layout directly shapes network mapping.",
-        "traceability": ["BR05", "C02", "A02"],
-        "relatedComponents": ["Supervisor Zones", "vSphere Supervisor and Namespaces", "VPC Networking"]
+        "traceability": [
+          "BR05",
+          "C02",
+          "A02"
+        ],
+        "relatedComponents": [
+          "Supervisor Zones",
+          "vSphere Supervisor and Namespaces",
+          "VPC Networking"
+        ],
+        "title": "DD-906: How should Supervisor zones be laid out?",
+        "decisionRule": "Balance Phase 1 cost with isolation ⇒ single management zone + isolated workload zones. Three management zones only when control-plane failure requirements justify them."
       }
     ],
     "vcf91Updates": [
@@ -929,6 +1250,17 @@
         "description": "VCF Automation 9.1 allows the VM Apps and All Apps organization models to run simultaneously and to share the same vCenter and NSX infrastructure, removing the previous requirement to stand up separate vCenter and NSX environments to adopt the Supervisor-based model.",
         "impact": "Adopting All Apps under DD-902 no longer forces an all-at-once cutover for existing Aria Automation consumers, so a phased transition is possible without duplicating infrastructure."
       }
+    ],
+    "lesson": {
+      "what": "Consumption is how users get the platform: VCF Automation organizations, namespaces, VM/VKS services, tenancy strength and Supervisor zones.",
+      "how": "Identity → Automation organization → namespace (RBAC/quota/policy) → published services (VM Service, VKS) → Supervisor management/workload zones on infrastructure. Choose All Apps for mixed VM+Kubernetes; separate namespaces per trust boundary.",
+      "why": "Best practice for RFS: HA Automation; All Apps org; separate namespaces; hard logical tenancy with orgs (physical only if PCI/contracts require it); publish only required services; start with one management zone + isolated workload zones.",
+      "goal": "After this module you should explain the mechanism without notes, then defend each design choice from evidence — not from a memorized letter."
+    },
+    "checkYourself": [
+      "Why All Apps rather than VM Apps?",
+      "What boundary maps to a separate namespace?",
+      "When does physical tenancy become necessary despite cost?"
     ]
   },
   {
@@ -1027,8 +1359,17 @@
         "rationale": "A single curated dashboard gives the operations team one agreed source of truth that can be assessed at a glance and kept current. Restricting it to indicators tied to agreed service level objectives and to alerts that require action is what keeps it readable; investigation depth belongs in drill-down dashboards and views rather than on the primary display. It also makes gaps obvious, because a missing objective has no tile.",
         "alternative": "Relying on the out-of-the-box dashboards alone was rejected because they are built for exploration rather than for at-a-glance operational monitoring against this customer's objectives. Building many role-specific dashboards was rejected because near-duplicate views drift, go unmaintained and destroy the notion of a single source of truth.",
         "amprsImpact": "Manageability improves substantially through one maintained view and a clear operational focus. Availability improves indirectly because genuine problems are noticed faster and are not lost in noise. Performance and security are neutral. The ongoing obligation is dashboard hygiene as objectives change.",
-        "traceability": ["BR05", "C03"],
-        "relatedComponents": ["Dashboards", "Key Performance Indicators", "VCF Operations"]
+        "traceability": [
+          "BR05",
+          "C03"
+        ],
+        "relatedComponents": [
+          "Dashboards",
+          "Key Performance Indicators",
+          "VCF Operations"
+        ],
+        "title": "DD-1001: How many dashboards should be created for day 2 operations, and what should they contain?",
+        "decisionRule": "BR17 asks for essential Phase 1 KPIs ⇒ one focused NOC dashboard, not dashboard sprawl."
       },
       {
         "id": "DD-1002",
@@ -1038,8 +1379,20 @@
         "rationale": "The capabilities form a chain in which each link depends on the others, so adopting a subset leaves the instrumentation broken. Policies scope what is evaluated and at what threshold per object group; symptoms are the individual conditions; alert definitions compose symptoms and attach recommendations and actions; notification rules deliver the result; super metrics supply the measures the platform does not natively collect and can act as symptom sources; dashboards present the curated indicator set. Metrics without alerts are unread, alerts without policies are noise, and custom objectives without super metrics cannot be measured at all.",
         "alternative": "Using dashboards and native alerts only was rejected because service level objectives that the platform does not natively track would be unmeasurable, and default thresholds would generate noise on development objects. Using alerts without curated dashboards was rejected because there would be no at-a-glance view of platform state against objectives.",
         "amprsImpact": "Manageability improves substantially because monitoring becomes deliberate and differentiated by service level rather than default and uniform. Availability and recoverability improve through earlier and better-targeted detection. Manageability also carries a real cost: policies, super metrics and alert definitions are configuration that must be built, tuned and maintained. Performance and security are neutral.",
-        "traceability": ["BR05", "C03"],
-        "relatedComponents": ["Policies", "Symptoms", "Alerts", "Super Metrics", "Key Performance Indicators", "Dashboards"]
+        "traceability": [
+          "BR05",
+          "C03"
+        ],
+        "relatedComponents": [
+          "Policies",
+          "Symptoms",
+          "Alerts",
+          "Super Metrics",
+          "Key Performance Indicators",
+          "Dashboards"
+        ],
+        "title": "DD-1002: Which VCF Operations capabilities should be used to instrument the platform?",
+        "decisionRule": "Detection + context + action needs policies, symptoms, alerts, KPIs and super metrics together."
       },
       {
         "id": "DD-1003",
@@ -1049,8 +1402,19 @@
         "rationale": "A provisioning time objective is a distribution, not a single number, so it must be measured as one. Timestamps give the raw duration; percentiles expose the tail that users actually experience, which an average conceals; the failure count matters because a fast failure is not a success. Implementing the measure as a super metric makes it available to symptoms, so the objective becomes alertable rather than merely reportable, and it then appears on the single network operations centre dashboard.",
         "alternative": "Reporting average provisioning time was rejected because averages hide the tail and can look healthy while a meaningful share of requests breach the objective. Reporting success and failure counts alone was rejected because they say nothing about whether the time objective is met. Monthly manual reporting was rejected because it cannot trigger a response.",
         "amprsImpact": "Manageability and performance visibility improve markedly, giving an evidence base for capacity and tuning decisions. Availability improves indirectly through earlier detection of degradation. The cost is configuration effort: super metrics, symptoms, alert definitions and dashboard tiles to build and maintain. In 9.1, Fast Deploy substantially shortens provisioning times, so the objective threshold should be reviewed after upgrade.",
-        "traceability": ["BR05", "C03"],
-        "relatedComponents": ["Key Performance Indicators", "Super Metrics", "Symptoms", "Alerts", "Dashboards"]
+        "traceability": [
+          "BR05",
+          "C03"
+        ],
+        "relatedComponents": [
+          "Key Performance Indicators",
+          "Super Metrics",
+          "Symptoms",
+          "Alerts",
+          "Dashboards"
+        ],
+        "title": "DD-1003: How should the deployment or provisioning service level objective be instrumented?",
+        "decisionRule": "Under-30-minute SLO needs start/queue/ready timestamps, duration/failure metrics, threshold alert, and p95/p99 — not averages alone. Phase 1 alerts follow C03 (email)."
       }
     ],
     "vcf91Updates": [
@@ -1064,6 +1428,17 @@
         "description": "VCF 9.1 adds fleet-wide policy enforcement with granular visibility into configuration changes and drift across VCF instances, vCenter instances and individual clusters, including centralised enforcement of security settings such as password policy that previously had to be configured per component. Proactive diagnostics improve VCF health dashboards and add advanced vSAN and NSX component diagnostics.",
         "impact": "Compliance and drift become continuously measured platform states rather than periodic audit exercises, which adds compliance and drift indicators to the curated dashboard in DD-1001 and reduces the volume of custom instrumentation needed under DD-1002."
       }
+    ],
+    "lesson": {
+      "what": "Day 2 operations prove the design with VCF Operations: policies, symptoms, alerts, KPIs, super metrics and role-specific dashboards tied to service objectives.",
+      "how": "Telemetry → metrics/super metrics → symptoms → alerts with severity/owner → policies on object groups → dashboard/email response. For the under-30-minute KPI, capture start/queue/provision/ready timestamps and track p95/p99 plus failures.",
+      "why": "Best practice: one essential NOC dashboard (not sprawl); use all Operations capabilities together; averages alone hide breaches; Phase 1 alerts go to email under C03 until ticketing exists.",
+      "goal": "After this module you should explain the mechanism without notes, then defend each design choice from evidence — not from a memorized letter."
+    },
+    "checkYourself": [
+      "Which KPI proves the under-30-minute promise?",
+      "Why is an average alone unsafe?",
+      "How does C03 change alert delivery?"
     ]
   },
   {
@@ -1154,8 +1529,20 @@
         "rationale": "The migration is large and the workloads cannot generally absorb an outage, and RAV is the only method that satisfies both conditions: it replicates many virtual machines in parallel with resiliency and scheduled switchover windows, then performs each switchover one virtual machine at a time using vMotion so no individual workload experiences downtime. Because only deltas plus memory contents transfer at switchover, the cutover window stays short even for a large batch. Reserving bulk for reboot-tolerant workloads and cold for powered-off ones conserves RAV capacity and bandwidth for the workloads that actually need it.",
         "alternative": "Bulk migration alone was rejected as the primary method because its switchover interruption is reboot-equivalent, which the downtime-sensitive workloads cannot accept. vMotion alone was rejected because it is serial and one virtual machine at a time, so it cannot deliver the required scale within any realistic window. Cold migration alone was rejected because it requires the workload to be off for the entire copy.",
         "amprsImpact": "Availability during migration is preserved because individual workloads do not go down at switchover. Recoverability is supported by wave-based execution with the source environment retained as the fallback until acceptance. Manageability requires the HCX Enterprise licence tier, service mesh and interconnect configuration, and wave scheduling discipline. Performance depends on interconnect bandwidth and the workloads' data change rate, both of which must be measured before wave sizing, and the observed uplink utilisation makes bandwidth a live risk.",
-        "traceability": ["BR05", "C02", "A02"],
-        "relatedComponents": ["Replication Assisted vMotion (RAV)", "Bulk Migration", "Cold Migration", "HCX (VCF Operations HCX)", "Wave Planning, Validation and Rollback"]
+        "traceability": [
+          "BR05",
+          "C02",
+          "A02"
+        ],
+        "relatedComponents": [
+          "Replication Assisted vMotion (RAV)",
+          "Bulk Migration",
+          "Cold Migration",
+          "HCX (VCF Operations HCX)",
+          "Wave Planning, Validation and Rollback"
+        ],
+        "title": "DD-1101: Which HCX migration method should be used for the bulk of the workload migration into the new workload domain?",
+        "decisionRule": "Large-scale minimal interruption ⇒ RAV. Bulk when short cutover is OK. Cold for powered-off. Method is chosen per wave from downtime tolerance, not memorized as one universal answer."
       }
     ],
     "vcf91Updates": [
@@ -1164,6 +1551,17 @@
         "description": "VCF 9.1 introduces no significant changes to the HCX migration methods. Cold, Bulk, vMotion, Replication Assisted vMotion and OS Assisted Migration behave as in 9.0, and the component continues to be branded VCF Operations HCX.",
         "impact": "DD-1101 is unaffected by the 9.1 upgrade. Two adjacent 9.1 changes are worth noting during migration planning: VCF Import and the converge capability integrated into VCF Installer and VCF Operations offer an alternative to workload-by-workload migration where existing vSphere estates can be brought into VCF in place, and vVols deprecation means any source workloads on Virtual Volumes need a target storage model decided before their wave runs."
       }
+    ],
+    "lesson": {
+      "what": "Migration moves Development VMs into the new workload domain using HCX methods: Cold, Bulk, vMotion and Replication Assisted vMotion (RAV).",
+      "how": "Discover dependencies → group into waves → pick method per downtime tolerance → validate target capacity/network → replicate or move → cut over → validate app → rollback or close. Method is per wave, not one choice for every VM.",
+      "why": "Best practice: RAV when the requirement is large-scale minimal interruption; Bulk when a short scheduled cutover is OK; Cold for powered-off; standard vMotion for smaller live moves. A successful data move is not application success without functional/security/perf validation.",
+      "goal": "After this module you should explain the mechanism without notes, then defend each design choice from evidence — not from a memorized letter."
+    },
+    "checkYourself": [
+      "Differentiate Cold, Bulk, vMotion and RAV in one line each.",
+      "Why is RAV the best fit for “minimal downtime at scale”?",
+      "When is Bulk still correct for some Dev VMs?"
     ]
   }
 ]

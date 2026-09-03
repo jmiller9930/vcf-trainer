@@ -231,21 +231,45 @@
   function componentCard(c) {
     const url = safeUrl(c.sourceUrl);
     return `
-      <details class="disclosure">
-        <summary>
-          <span class="summary-title">${esc(c.name)}</span>
+      <article class="component-card">
+        <header class="component-card-head">
+          <h4>${esc(c.name)}</h4>
           ${c.delta91 ? badge91 : ''}
-        </summary>
-        <div class="disclosure-body">
-          <div class="whw">
-            ${c.what ? `<div class="whw-block whw-what"><h4>What it is</h4><p>${esc(c.what)}</p></div>` : ''}
-            ${c.how ? `<div class="whw-block whw-how"><h4>How it works</h4><p>${esc(c.how)}</p></div>` : ''}
-            ${c.why ? `<div class="whw-block whw-why"><h4>Why it matters</h4><p>${esc(c.why)}</p></div>` : ''}
-          </div>
-          ${c.examTip ? `<div class="exam-tip"><h4>Exam tip</h4><p>${esc(c.examTip)}</p></div>` : ''}
-          ${url ? `<a class="source-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(c.sourceTitle)}</a>` : ''}
+        </header>
+        <div class="whw">
+          ${c.what ? `<div class="whw-block whw-what"><h4>What</h4><p>${esc(c.what)}</p></div>` : ''}
+          ${c.how ? `<div class="whw-block whw-how"><h4>How</h4><p>${esc(c.how)}</p></div>` : ''}
+          ${c.why ? `<div class="whw-block whw-why"><h4>Why / best practice</h4><p>${esc(c.why)}</p></div>` : ''}
         </div>
-      </details>`;
+        ${c.examTip ? `<div class="exam-tip"><h4>Exam tip</h4><p>${esc(c.examTip)}</p></div>` : ''}
+        ${url ? `<a class="source-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(c.sourceTitle)}</a>` : ''}
+      </article>`;
+  }
+
+  function lessonBlock(lesson) {
+    if (!lesson || !(lesson.what || lesson.how || lesson.why)) return '';
+    return `
+      <section class="section lesson-section">
+        <h3><span class="step-num">1</span> Understand<span class="section-count">What · How · Why</span></h3>
+        ${lesson.goal ? `<p class="lesson-goal">${esc(lesson.goal)}</p>` : ''}
+        <div class="lesson-grid">
+          ${lesson.what ? `<div class="whw-block whw-what"><h4>What</h4><p>${esc(lesson.what)}</p></div>` : ''}
+          ${lesson.how ? `<div class="whw-block whw-how"><h4>How it works</h4><p>${esc(lesson.how)}</p></div>` : ''}
+          ${lesson.why ? `<div class="whw-block whw-why"><h4>Why / best practice</h4><p>${esc(lesson.why)}</p></div>` : ''}
+        </div>
+      </section>`;
+  }
+
+  function checkBlock(checks) {
+    if (!checks || !checks.length) return '';
+    return `
+      <section class="section check-section">
+        <h3><span class="step-num">3</span> Check yourself<span class="section-count">${checks.length}</span></h3>
+        <p class="section-lead">Cover the page. Answer out loud. If you cannot explain the mechanism, do not go to the quiz yet — that would only train memorization.</p>
+        <ol class="check-list">
+          ${checks.map(q => `<li>${esc(q)}</li>`).join('')}
+        </ol>
+      </section>`;
   }
 
   function decisionCard(d) {
@@ -256,7 +280,7 @@
       : '';
 
     return `
-      <details class="disclosure">
+      <details class="disclosure dd-teach">
         <summary>
           <span class="summary-title">${esc(d.title)}</span>
           ${d.delta91 ? badge91 : ''}
@@ -264,37 +288,37 @@
         <div class="disclosure-body dd-body">
           ${d.question ? `
             <div class="dd-field">
-              <span class="dd-label">Design question</span>
+              <span class="dd-label">Scenario</span>
               <span class="dd-value">${esc(d.question)}</span>
             </div>` : ''}
-          ${d.confidence ? `
-            <div class="dd-field">
-              <span class="dd-label">Confidence</span>
-              <span class="dd-value">${esc(d.confidence)}</span>
+          ${d.decisionRule ? `
+            <div class="dd-field is-rule">
+              <span class="dd-label">Decision rule (learn this)</span>
+              <span class="dd-value">${esc(d.decisionRule)}</span>
             </div>` : ''}
           ${d.recommendation ? `
             <div class="dd-field is-reco">
-              <span class="dd-label">Recommendation</span>
-              <span class="dd-value">${esc(d.recommendation)}</span>
+              <span class="dd-label">RFS recommendation (apply the rule)</span>
+              <span class="dd-value">${esc(d.recommendation)}${d.confidence ? ` <em>(${esc(d.confidence)})</em>` : ''}</span>
             </div>` : ''}
           ${d.rationale ? `
             <div class="dd-field">
-              <span class="dd-label">Rationale</span>
+              <span class="dd-label">Why this evidence wins</span>
               <span class="dd-value">${esc(d.rationale)}</span>
             </div>` : ''}
           ${d.alternative ? `
             <div class="dd-field">
-              <span class="dd-label">Alternative considered</span>
+              <span class="dd-label">Why the alternative loses</span>
               <span class="dd-value">${esc(d.alternative)}</span>
             </div>` : ''}
           ${d.amprs.length ? `
             <div class="dd-field">
-              <span class="dd-label">AMPRS impact</span>
+              <span class="dd-label">AMPRS trade-off</span>
               <div class="chips">${d.amprs.map(a => `<span class="chip chip-amprs">${esc(a)}</span>`).join('')}</div>
             </div>` : ''}
           ${d.relatedComponents && d.relatedComponents.length ? `
             <div class="dd-field">
-              <span class="dd-label">Related components</span>
+              <span class="dd-label">Components you must understand first</span>
               <div class="chips">${d.relatedComponents.map(c => `<span class="chip">${esc(c)}</span>`).join('')}</div>
             </div>` : ''}
           ${trace ? `
@@ -326,30 +350,44 @@
       <a class="backlink" href="#study">← All modules</a>
       ${pageHead(`Module ${m.number}${m.exam ? ` · ${m.exam}` : ''}`, m.title, m.summary)}
 
+      <div class="learn-path" role="note">
+        <strong>How to use this module:</strong>
+        Understand the mechanism → check yourself without notes → apply the decision rule to RFS → then quiz.
+        The quiz rewards understanding. Memorizing letter answers will fail you on a reworded scenario.
+      </div>
+
       <div class="quiz-bar">
         <span class="score-pill">${pct(stats.mastery)} <span>mastery</span></span>
         <span class="score-pill">${stats.total} <span>questions</span></span>
         ${stats.dueToday ? `<span class="score-pill">${stats.dueToday} <span>due today</span></span>` : ''}
         <span class="spacer"></span>
-        <a class="btn btn-sm btn-primary" href="#quiz/${encodeURIComponent(m.id)}">Quiz this module</a>
+        <a class="btn btn-sm btn-primary" href="#quiz/${encodeURIComponent(m.id)}">Step 5 · Quiz</a>
       </div>
 
-      ${m.components.length ? section('Component reference', m.components.length,
-        m.components.map(componentCard).join('')) : ''}
+      ${lessonBlock(m.lesson)}
 
-      ${m.keyFacts.length ? section('Key facts', m.keyFacts.length,
-        `<ul class="factlist">${m.keyFacts.map(f =>
+      ${m.components.length ? section('2 · Component deep dive', m.components.length,
+        `<p class="section-lead">Each component is What → How → Why. Read until you can teach it without looking.</p>
+         <div class="component-stack">${m.components.map(componentCard).join('')}</div>`) : ''}
+
+      ${checkBlock(m.checkYourself)}
+
+      ${m.keyFacts.length ? section('Remember cold', m.keyFacts.length,
+        `<p class="section-lead">Facts that show up in sizing and elimination questions — still tied to the mechanisms above.</p>
+         <ul class="factlist">${m.keyFacts.map(f =>
           `<li class="fact"><span>${esc(f.text)} ${f.delta91 ? badge91 : ''}</span></li>`).join('')}</ul>`) : ''}
 
-      ${m.attention.length ? section('Watch out', m.attention.length,
-        m.attention.map(a => `
+      ${m.attention.length ? section('Common traps', m.attention.length,
+        `<p class="section-lead">These are wrong mental models. If you hold one, you will pick the attractive wrong option.</p>
+         ${m.attention.map(a => `
           <div class="attention">
             <h4>${esc(a.title)} ${a.delta91 ? badge91 : ''}</h4>
             <p>${esc(a.text)}</p>
-          </div>`).join('')) : ''}
+          </div>`).join('')}`) : ''}
 
-      ${m.decisions.length ? section('Design decisions', m.decisions.length,
-        m.decisions.map(decisionCard).join('')) : ''}
+      ${m.decisions.length ? section('4 · Apply (design decisions)', m.decisions.length,
+        `<p class="section-lead">Learn the <em>decision rule</em> first. The RFS recommendation is one application of that rule — not a fact to memorize by ID.</p>
+         ${m.decisions.map(decisionCard).join('')}`) : ''}
 
       ${m.vcf91Updates && m.vcf91Updates.length ? section('9.1 updates in this chapter', m.vcf91Updates.length,
         m.vcf91Updates.map(item => `
@@ -367,7 +405,7 @@
             ${item.detail ? `<p class="delta-detail">${esc(item.detail)}</p>` : ''}
           </div>`).join('')) : ''}
 
-      ${!m.components.length && !m.keyFacts.length && !m.attention.length && !m.decisions.length
+      ${!m.components.length && !m.keyFacts.length && !m.attention.length && !m.decisions.length && !(m.lesson && (m.lesson.what || m.lesson.how || m.lesson.why))
         ? emptyState('This module has no published content yet.') : ''}`;
   }
 
@@ -404,7 +442,7 @@
     const accuracy = quiz.asked ? Math.round((quiz.correct / quiz.asked) * 100) : 0;
 
     view.innerHTML = `
-      ${pageHead('Quiz', 'Adaptive quiz', 'Questions are scheduled with SM-2 spaced repetition — overdue and weak items come first.')}
+      ${pageHead('Quiz', 'Adaptive quiz', 'Questions test whether you understand the mechanism and decision rule. Spaced repetition schedules weak items first — letter memorization will not survive a reworded scenario.')}
 
       <div class="quiz-bar">
         <label class="field">Module
@@ -472,8 +510,11 @@
 
         ${quiz.answered ? `
           <div class="explain ${wasRight ? 'is-correct' : 'is-wrong'}">
-            <h4>${wasRight ? 'Correct' : `Incorrect — the answer is ${letter(q.answer)}`}</h4>
+            <h4>${wasRight ? 'Correct — for the right reason?' : `Incorrect — the answer is ${letter(q.answer)}`}</h4>
             <p>${esc(q.explanation || 'No explanation was provided for this question.')}</p>
+            <p class="hint">${wasRight
+              ? 'Can you restate the decision rule without looking? If not, return to Study before the next question.'
+              : 'Do not memorize the letter. Open Study, re-learn the What/How/Why, then retry.'}</p>
           </div>
           <div class="qfoot">
             <button type="button" class="btn btn-primary" data-action="quiz-next">Next question</button>
