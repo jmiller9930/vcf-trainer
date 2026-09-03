@@ -414,8 +414,8 @@
           </select>
         </label>
         <span class="spacer"></span>
-        <span class="score-pill">${quiz.correct}/${quiz.asked} <span>this session${quiz.asked ? ` · ${accuracy}%` : ''}</span></span>
-        <span class="score-pill">${due} <span>due today</span></span>
+        <span class="score-pill" id="quizScore">${quiz.correct}/${quiz.asked} <span>this session${quiz.asked ? ` · ${accuracy}%` : ''}</span></span>
+        <span class="score-pill" id="quizDue">${due} <span>due today</span></span>
       </div>
 
       <div id="quizSlot">${quizCard()}</div>`;
@@ -485,6 +485,18 @@
       </div>`;
   }
 
+  /* The running score and due counter live outside the question card, so they
+     are patched directly rather than waiting for the next full render. */
+  function updateQuizBar() {
+    const score = document.getElementById('quizScore');
+    if (score) {
+      const accuracy = quiz.asked ? Math.round((quiz.correct / quiz.asked) * 100) : 0;
+      score.innerHTML = `${quiz.correct}/${quiz.asked} <span>this session${quiz.asked ? ` · ${accuracy}%` : ''}</span>`;
+    }
+    const due = document.getElementById('quizDue');
+    if (due) due.innerHTML = `${QuizEngine.getDueCount(quiz.filter || undefined)} <span>due today</span>`;
+  }
+
   function repaintQuizCard() {
     const slot = document.getElementById('quizSlot');
     if (slot) slot.innerHTML = quizCard();
@@ -503,6 +515,7 @@
 
     QuizEngine.recordAnswer(q.id, correct);
     repaintQuizCard();
+    updateQuizBar();
     refreshSidebarStats();
 
     const next = document.querySelector('[data-action="quiz-next"]');
@@ -624,7 +637,7 @@
     view.innerHTML = `
       <div class="exam-bar">
         <span class="timer" id="examTimer">${formatClock(remaining)}</span>
-        <span class="score-pill"><span id="examAnswered">${answered}</span>/${exam.ids.length} <span>answered</span></span>
+        <span class="score-pill" id="examAnswered">${answered}/${exam.ids.length} <span>answered</span></span>
         <span class="spacer"></span>
         <button type="button" class="btn btn-sm" data-action="exam-prev" ${exam.index === 0 ? 'disabled' : ''}>← Prev</button>
         <button type="button" class="btn btn-sm" data-action="exam-next" ${exam.index === exam.ids.length - 1 ? 'disabled' : ''}>Next →</button>
@@ -646,7 +659,7 @@
         </div>` : emptyState('This question could not be loaded.')}
 
       <section class="section">
-        <h3>Navigator<span class="section-count">${answered} answered</span></h3>
+        <h3>Navigator<span class="section-count" id="examNavCount">${answered} answered</span></h3>
         <div class="navigator">${navigator}</div>
       </section>`;
   }
@@ -667,8 +680,11 @@
       navBtn.setAttribute('aria-label', `Question ${exam.index + 1}, answered`);
     }
 
+    const answered = exam.answers.filter(a => a !== null).length;
     const counter = document.getElementById('examAnswered');
-    if (counter) counter.textContent = String(exam.answers.filter(a => a !== null).length);
+    if (counter) counter.innerHTML = `${answered}/${exam.ids.length} <span>answered</span>`;
+    const navCount = document.getElementById('examNavCount');
+    if (navCount) navCount.textContent = `${answered} answered`;
   }
 
   function gotoExamQuestion(index) {
