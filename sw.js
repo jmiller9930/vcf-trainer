@@ -1,6 +1,6 @@
 /* VCF 9 Trainer — service worker: cache-first offline shell. */
 
-const CACHE_NAME = 'vcf-trainer-v6';
+const CACHE_NAME = 'vcf-trainer-v7';
 
 /* Files the app cannot run without — a failure here fails the install. */
 const CORE_ASSETS = [
@@ -10,6 +10,7 @@ const CORE_ASSETS = [
   './css/style.css',
   './js/data-loader.js',
   './js/quiz-engine.js',
+  './js/ai-trainer.js',
   './js/app.js',
   './data/modules.json',
   './data/questions.json',
