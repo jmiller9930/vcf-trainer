@@ -166,7 +166,9 @@ function mainStaticChecks() {
   ok('acronym bank + term checks', fs.existsSync(path.join(root, 'data/acronyms.json')) && fs.readFileSync(path.join(root, 'js/data-loader.js'), 'utf8').includes('attachTermChecks') && appAi.includes('course-term') && appAi.includes('expandAcronyms'));
   ok('SW caches acronyms.json', fs.readFileSync(path.join(root, 'sw.js'), 'utf8').includes('acronyms.json'));
   ok('audio start/stop exclusive', aiSrc.includes('getAudioPhase') && aiSrc.includes('listenGen') && fs.readFileSync(path.join(root,'js/app.js'),'utf8').includes('audioLiveStatus'));
-  ok('OpenAI-only audio pipeline', aiSrc.includes('ONE pipeline') && aiSrc.includes('async function play(') && !aiSrc.includes('speakBrowser') && fs.readFileSync(path.join(root,'js/app.js'),'utf8').includes('AITrainer.play'));
+  ok('OpenAI-only audio pipeline', aiSrc.includes('ONE pipeline') && aiSrc.includes('async function play(') && !aiSrc.includes('function speakBrowser') && fs.readFileSync(path.join(root,'js/app.js'),'utf8').includes('AITrainer.play'));
+  ok('audio preload cache', aiSrc.includes('async function prepare(') && aiSrc.includes('async function preload(') && aiSrc.includes('audioBlobCache'));
+  ok('audio escort locks Next', fs.readFileSync(path.join(root,'js/app.js'),'utf8').includes('audioBlocksAdvance') && fs.readFileSync(path.join(root,'js/app.js'),'utf8').includes('courseWhere'));
 }
 
 async function mainHttpChecks() {

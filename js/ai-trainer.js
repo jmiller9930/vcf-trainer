@@ -867,7 +867,8 @@ window.AITrainer = (function () {
 
   /* ---------------------------------------------------------------- audio / TTS
      ONE pipeline only: OpenAI /audio/speech.
-     No device-voice fallback. No parallel engines.
+     prepare/preload → cache blob → play (no lag when ready).
+     No device-voice fallback.
      ---------------------------------------------------------------- */
 
   let audioEl = null;
@@ -876,7 +877,10 @@ window.AITrainer = (function () {
   let speaking = false;
   let listenGen = 0;
   let onSpeakEnd = null;
-  let audioPhase = 'idle'; /* idle | preparing | playing */
+  let audioPhase = 'idle'; /* idle | preparing | ready | playing */
+  let lastReadyKey = null;
+  const audioBlobCache = new Map(); /* key -> { blob, script, model, voice, scriptEngine, cacheId, at } */
+  const AUDIO_CACHE_MAX = 24;
 
   function hardSilence() {
     if (speakAbort) {
@@ -907,7 +911,7 @@ window.AITrainer = (function () {
     hardSilence();
     const was = speaking;
     speaking = false;
-    audioPhase = 'idle';
+    audioPhase = lastReadyKey && audioBlobCache.has(lastReadyKey) ? 'ready' : 'idle';
     if (was && !silent && typeof onSpeakEnd === 'function') {
       const cb = onSpeakEnd;
       onSpeakEnd = null;
@@ -921,17 +925,170 @@ window.AITrainer = (function () {
 
   function getAudioPhase() { return audioPhase; }
 
+  function trimAudioCache() {
+    while (audioBlobCache.size > AUDIO_CACHE_MAX) {
+      const oldest = audioBlobCache.keys().next().value;
+      audioBlobCache.delete(oldest);
+    }
+  }
+
+  function voiceCacheKey(script, model, voice) {
+    return `${hashText(script)}:${model}:${voice}`;
+  }
+
   /**
-   * Single OpenAI TTS pipeline.
-   * meta optional — if present, DeepSeek may rewrite the script first (text only),
-   * then OpenAI speaks. Voice is always OpenAI; never browser speechSynthesis.
+   * Build spoken script + fetch OpenAI audio blob (cached).
+   * Does not play. Safe to call ahead of Start for zero-lag playback.
+   */
+  async function prepare(text, meta, opts) {
+    const cleaned = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!cleaned) throw new Error('Nothing to prepare.');
+
+    const openai = openaiProvider();
+    if (!openai) {
+      throw new Error('OpenAI TTS is not configured. Save an OpenAI key under AI Trainer.');
+    }
+
+    const signal = opts && opts.signal;
+    const externalGen = opts && opts.gen;
+    const trackPhase = !(opts && opts.silentPhase);
+
+    let script = cleaned;
+    let scriptEngine = 'raw';
+    let cacheId = null;
+
+    if (meta && deepseekProvider()) {
+      if (trackPhase && !speaking) audioPhase = 'preparing';
+      const transformed = await transformForSpeech(cleaned, meta, signal);
+      if (externalGen != null && externalGen !== listenGen) return { aborted: true };
+      script = transformed.script;
+      scriptEngine = transformed.engine;
+      cacheId = transformed.cacheId;
+    } else if (script.length > 2000) {
+      script = `${script.slice(0, 1997)}…`;
+      scriptEngine = 'local-trim';
+    }
+
+    const model = openai.ttsModel || DEFAULT_TTS_MODEL;
+    const voice = openai.ttsVoice || DEFAULT_TTS_VOICE;
+    const style = openai.ttsStyle || DEFAULT_TTS_STYLE;
+    const key = voiceCacheKey(script, model, voice);
+
+    if (audioBlobCache.has(key)) {
+      lastReadyKey = key;
+      if (trackPhase && !speaking) audioPhase = 'ready';
+      const hit = audioBlobCache.get(key);
+      return {
+        key,
+        blob: hit.blob,
+        script: hit.script,
+        scriptEngine: hit.scriptEngine,
+        cacheId: hit.cacheId,
+        model,
+        voice,
+        fromCache: true
+      };
+    }
+
+    if (trackPhase && !speaking) audioPhase = 'preparing';
+    const base = String(openai.baseUrl || '').replace(/\/+$/, '');
+    const body = {
+      model,
+      voice,
+      input: script.slice(0, model === 'tts-1' ? 4096 : 2000)
+    };
+    if (model !== 'tts-1') body.instructions = style;
+
+    const res = await fetch(`${base}/audio/speech`, {
+      method: 'POST',
+      signal,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${openai.apiKey}`
+      },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => res.statusText);
+      throw new Error(errText || res.statusText);
+    }
+    if (externalGen != null && externalGen !== listenGen) return { aborted: true };
+
+    const blob = await res.blob();
+    if (externalGen != null && externalGen !== listenGen) return { aborted: true };
+
+    audioBlobCache.set(key, {
+      blob,
+      script,
+      model,
+      voice,
+      scriptEngine,
+      cacheId,
+      at: Date.now()
+    });
+    trimAudioCache();
+    lastReadyKey = key;
+    if (trackPhase && !speaking) audioPhase = 'ready';
+
+    return {
+      key,
+      blob,
+      script,
+      scriptEngine,
+      cacheId,
+      model,
+      voice,
+      fromCache: false
+    };
+  }
+
+  /** Background preload — does not interrupt current playback. */
+  async function preload(text, meta) {
+    if (!openaiProvider()) return null;
+    if (speaking) return null;
+    try {
+      speakAbort = typeof AbortController !== 'undefined' ? new AbortController() : null;
+      const prepared = await prepare(text, meta || null, {
+        signal: speakAbort && speakAbort.signal,
+        silentPhase: false
+      });
+      return prepared && !prepared.aborted ? prepared : null;
+    } catch (err) {
+      if (err && (err.name === 'AbortError' || /abort/i.test(err.message || ''))) return null;
+      if (!speaking) audioPhase = 'idle';
+      throw err;
+    }
+  }
+
+  function isPreloaded(text, meta) {
+    /* Best-effort: only knows after script is known; raw-text key without DeepSeek */
+    const openai = openaiProvider();
+    if (!openai) return false;
+    let script = String(text || '').replace(/\s+/g, ' ').trim();
+    if (!script) return false;
+    if (!(meta && deepseekProvider()) && script.length > 2000) {
+      script = `${script.slice(0, 1997)}…`;
+    }
+    /* If DeepSeek may rewrite, we can only confirm via lastReady / cache after prepare */
+    if (meta && deepseekProvider()) {
+      return lastReadyKey ? audioBlobCache.has(lastReadyKey) : false;
+    }
+    const key = voiceCacheKey(
+      script,
+      openai.ttsModel || DEFAULT_TTS_MODEL,
+      openai.ttsVoice || DEFAULT_TTS_VOICE
+    );
+    return audioBlobCache.has(key);
+  }
+
+  /**
+   * Single OpenAI TTS pipeline: prepare (cache) → play blob.
    */
   async function play(text, meta, opts) {
     const cleaned = String(text || '').replace(/\s+/g, ' ').trim();
     if (!cleaned) throw new Error('Nothing to read.');
 
-    const openai = openaiProvider();
-    if (!openai) {
+    if (!openaiProvider()) {
       throw new Error('OpenAI TTS is not configured. Save an OpenAI key under AI Trainer — Listen uses OpenAI only.');
     }
 
@@ -944,59 +1101,14 @@ window.AITrainer = (function () {
     const signal = speakAbort.signal;
 
     try {
-      let script = cleaned;
-      let scriptEngine = 'raw';
-      let cacheId = null;
+      const prepared = await prepare(cleaned, meta || null, { signal, gen });
+      if (!prepared || prepared.aborted || gen !== listenGen) return { engine: 'aborted' };
 
-      /* Optional script rewrite (text). Voice step below is still OpenAI only. */
-      if (meta && deepseekProvider()) {
-        const transformed = await transformForSpeech(cleaned, meta, signal);
-        if (gen !== listenGen) return { engine: 'aborted' };
-        script = transformed.script;
-        scriptEngine = transformed.engine;
-        cacheId = transformed.cacheId;
-      } else if (script.length > 2000) {
-        script = `${script.slice(0, 1997)}…`;
-        scriptEngine = 'local-trim';
-      }
-
-      if (gen !== listenGen) return { engine: 'aborted' };
-
-      const base = String(openai.baseUrl || '').replace(/\/+$/, '');
-      const model = openai.ttsModel || DEFAULT_TTS_MODEL;
-      const voice = openai.ttsVoice || DEFAULT_TTS_VOICE;
-      const style = openai.ttsStyle || DEFAULT_TTS_STYLE;
-      const body = {
-        model,
-        voice,
-        input: script.slice(0, model === 'tts-1' ? 4096 : 2000)
-      };
-      if (model !== 'tts-1') body.instructions = style;
-
-      const res = await fetch(`${base}/audio/speech`, {
-        method: 'POST',
-        signal,
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${openai.apiKey}`
-        },
-        body: JSON.stringify(body)
-      });
-      if (!res.ok) {
-        const errText = await res.text().catch(() => res.statusText);
-        throw new Error(errText || res.statusText);
-      }
-      if (gen !== listenGen) return { engine: 'aborted' };
-
-      /* Belt-and-suspenders: never leave device TTS running */
       if (typeof window !== 'undefined' && window.speechSynthesis) {
         try { window.speechSynthesis.cancel(); } catch (err) { /* ignore */ }
       }
 
-      const blob = await res.blob();
-      if (gen !== listenGen) return { engine: 'aborted' };
-
-      audioUrl = URL.createObjectURL(blob);
+      audioUrl = URL.createObjectURL(prepared.blob);
       audioEl = new Audio(audioUrl);
       audioPhase = 'playing';
       await new Promise((resolve, reject) => {
@@ -1008,7 +1120,7 @@ window.AITrainer = (function () {
       if (gen !== listenGen) return { engine: 'aborted' };
 
       speaking = false;
-      audioPhase = 'idle';
+      audioPhase = 'ready';
       if (typeof onSpeakEnd === 'function') {
         const cb = onSpeakEnd;
         onSpeakEnd = null;
@@ -1016,16 +1128,17 @@ window.AITrainer = (function () {
       }
       return {
         engine: 'openai-tts',
-        model,
-        voice,
-        scriptEngine,
-        cacheId,
-        script
+        model: prepared.model,
+        voice: prepared.voice,
+        scriptEngine: prepared.scriptEngine,
+        cacheId: prepared.cacheId,
+        script: prepared.script,
+        fromCache: !!prepared.fromCache
       };
     } catch (err) {
       if (gen === listenGen) {
         speaking = false;
-        audioPhase = 'idle';
+        audioPhase = lastReadyKey && audioBlobCache.has(lastReadyKey) ? 'ready' : 'idle';
         onSpeakEnd = null;
         hardSilence();
       }
@@ -1036,12 +1149,12 @@ window.AITrainer = (function () {
     }
   }
 
-  /** @deprecated use play() — kept as alias for one OpenAI pipeline */
+  /** @deprecated use play() */
   async function speakText(text, opts) {
     return play(text, null, opts);
   }
 
-  /** @deprecated use play() — kept as alias for one OpenAI pipeline */
+  /** @deprecated use play() */
   async function speakLesson(sourceText, meta, opts) {
     return play(sourceText, meta || {}, opts);
   }
@@ -1051,10 +1164,10 @@ window.AITrainer = (function () {
     const oai = !!openaiProvider(c);
     const ds = !!deepseekProvider(c);
     if (oai && ds) {
-      return 'One pipeline: DeepSeek writes the script → OpenAI speaks it. Stop cancels the run. No device voice.';
+      return 'OpenAI voice pipeline (preload → play). DeepSeek scripts optional. No device voice.';
     }
     if (oai) {
-      return 'One pipeline: OpenAI TTS only (Southern/Texas). Add DeepSeek for teacher-style scripts.';
+      return 'OpenAI voice pipeline (preload → play). Add DeepSeek for teacher-style scripts.';
     }
     return 'OpenAI TTS required for Listen. Save an OpenAI key under AI Trainer.';
   }
@@ -1079,6 +1192,9 @@ window.AITrainer = (function () {
     formatDeepSeekBalance,
     testConnection,
     transformForSpeech,
+    prepare,
+    preload,
+    isPreloaded,
     play,
     speakText,
     speakLesson,

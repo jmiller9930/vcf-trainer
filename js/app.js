@@ -239,6 +239,22 @@
   if (fontDecrease) fontDecrease.addEventListener('click', () => bumpFont(-FONT_STEP));
   if (fontIncrease) fontIncrease.addEventListener('click', () => bumpFont(FONT_STEP));
 
+  const AUDIO_ESCORT_KEY = 'vcf9.audioEscort';
+
+  function audioEscortOn() {
+    try {
+      const raw = localStorage.getItem(AUDIO_ESCORT_KEY);
+      if (raw == null) return !!(window.AITrainer && AITrainer.isTtsReady && AITrainer.isTtsReady());
+      return raw === '1' || raw === 'true';
+    } catch (err) {
+      return false;
+    }
+  }
+
+  function setAudioEscort(on) {
+    try { localStorage.setItem(AUDIO_ESCORT_KEY, on ? '1' : '0'); } catch (err) { /* ignore */ }
+  }
+
   function setListenUi(playing) {
     if (!listenToggle) return;
     const phase = window.AITrainer && AITrainer.getAudioPhase ? AITrainer.getAudioPhase() : (playing ? 'playing' : 'idle');
@@ -254,30 +270,116 @@
   function syncCourseAudioBar(busy, phase) {
     const startBtn = document.querySelector('[data-action="section-listen"]');
     const stopBtn = document.querySelector('[data-action="audio-stop"]');
+    const preloadBtn = document.querySelector('[data-action="audio-preload"]');
     const status = document.getElementById('audioLiveStatus');
+    const loader = document.getElementById('audioLoader');
     if (startBtn) {
-      startBtn.textContent = busy ? 'Start (busy…)' : 'Start';
+      startBtn.textContent = busy && phase === 'playing' ? 'Playing…' : (busy ? 'Loading…' : 'Start');
       startBtn.disabled = !!busy;
       startBtn.setAttribute('aria-pressed', busy ? 'true' : 'false');
     }
     if (stopBtn) stopBtn.disabled = !busy;
+    if (preloadBtn) preloadBtn.disabled = !!busy || !(window.AITrainer && AITrainer.isTtsReady && AITrainer.isTtsReady());
+    if (loader) loader.hidden = !(phase === 'preparing' || (busy && phase !== 'playing'));
     if (status) {
-      if (!busy || phase === 'idle') status.textContent = 'Idle — OpenAI voice pipeline. Press Start.';
-      else if (phase === 'preparing') status.textContent = 'OpenAI pipeline: preparing… Press Stop to cancel.';
-      else if (phase === 'playing') status.textContent = 'OpenAI pipeline: playing (Southern/Texas).';
-      else status.textContent = 'OpenAI pipeline running…';
+      if (phase === 'preparing') status.textContent = 'Loading OpenAI voice… (preloading). Press Stop to cancel.';
+      else if (phase === 'playing') status.textContent = 'Playing OpenAI voice. Next is locked until this finishes (audio escort).';
+      else if (phase === 'ready') status.textContent = 'Ready — voice cached. Press Start for instant play.';
+      else status.textContent = 'Idle — preload for no lag, then Start.';
     }
     const modBtn = document.querySelector('[data-action="module-listen"]');
     if (modBtn) {
       modBtn.textContent = audioPlaylist && busy ? 'Playing module…' : 'Play module';
       modBtn.setAttribute('aria-pressed', audioPlaylist && busy ? 'true' : 'false');
     }
+    const nextBtn = document.querySelector('[data-action="course-next"]');
+    if (nextBtn && course) {
+      const m = DataLoader.getModule(course.moduleId);
+      const section = m && m.course && m.course.sections[course.index];
+      const blocked = section ? !sectionCheckCleared(section) || audioBlocksAdvance(section) : true;
+      nextBtn.disabled = blocked;
+    }
+  }
+
+  function markSectionAudioHeard(sectionId) {
+    if (!course || !sectionId) return;
+    if (!course.audioHeard) course.audioHeard = {};
+    course.audioHeard[sectionId] = true;
+  }
+
+  function audioBlocksAdvance(section) {
+    if (!section) return false;
+    if (!audioEscortOn()) return false;
+    if (!(window.AITrainer && AITrainer.isTtsReady && AITrainer.isTtsReady())) return false;
+    if (AITrainer.isSpeaking && AITrainer.isSpeaking()) return true;
+    if (AITrainer.getAudioPhase && AITrainer.getAudioPhase() === 'preparing') return true;
+    if (!(course.audioHeard && course.audioHeard[section.id])) return true;
+    return false;
   }
 
   function stopPageAudio() {
     audioPlaylist = null;
     if (window.AITrainer) AITrainer.stopSpeech({ silent: true });
     setListenUi(false);
+  }
+
+  function currentSectionAudioMeta() {
+    if (!course) return null;
+    const m = DataLoader.getModule(course.moduleId);
+    const s = m && m.course && m.course.sections[course.index];
+    if (!m || !s) return null;
+    return {
+      text: sectionListenText(s, m.title),
+      meta: {
+        id: s.id,
+        title: s.title,
+        moduleTitle: m.title,
+        moduleId: m.id
+      },
+      module: m,
+      section: s,
+      index: course.index,
+      total: m.course.sections.length
+    };
+  }
+
+  async function preloadCurrentSection(opts) {
+    const ctx = currentSectionAudioMeta();
+    if (!ctx || !window.AITrainer || !AITrainer.preload) return;
+    if (!AITrainer.isTtsReady || !AITrainer.isTtsReady()) return;
+    if (AITrainer.isSpeaking && AITrainer.isSpeaking()) return;
+    setListenUi(true);
+    try {
+      await AITrainer.preload(ctx.text, ctx.meta);
+      setListenUi(false);
+      if (opts && opts.thenPlay) {
+        await startListen(ctx.text, ctx.meta);
+      }
+    } catch (err) {
+      setListenUi(false);
+      if (!(opts && opts.quiet)) {
+        window.alert(err.message || 'Could not preload OpenAI voice.');
+      }
+    }
+  }
+
+  function scheduleSectionPreload() {
+    if (!audioEscortOn()) return;
+    if (!(window.AITrainer && AITrainer.preload && AITrainer.isTtsReady && AITrainer.isTtsReady())) return;
+    if (AITrainer.isSpeaking && AITrainer.isSpeaking()) return;
+    const ctx = currentSectionAudioMeta();
+    if (!ctx) return;
+    Promise.resolve().then(async () => {
+      try {
+        await AITrainer.preload(ctx.text, ctx.meta);
+        if (course && course.moduleId === ctx.meta.moduleId && course.index === ctx.index) {
+          setListenUi(false);
+        }
+      } catch (err) {
+        /* quiet background preload */
+        if (!(AITrainer.isSpeaking && AITrainer.isSpeaking())) setListenUi(false);
+      }
+    });
   }
 
   function pageListenText() {
@@ -325,15 +427,23 @@
       const result = await AITrainer.play(payload, meta || null, {
         onEnd: () => {
           if (statusTimer) { clearInterval(statusTimer); statusTimer = null; }
+          if (meta && meta.id) markSectionAudioHeard(meta.id);
           if (audioPlaylist && meta && audioPlaylist.moduleId === meta.moduleId) {
             advanceAudioPlaylist();
           } else {
             setListenUi(false);
+            if (course) renderCourse(course.moduleId);
           }
         }
       });
+      if (result && result.engine === 'openai-tts' && meta && meta.id) {
+        markSectionAudioHeard(meta.id);
+      }
       if (result && result.engine === 'aborted') setListenUi(false);
-      else if (!(AITrainer.isSpeaking && AITrainer.isSpeaking())) setListenUi(false);
+      else if (!(AITrainer.isSpeaking && AITrainer.isSpeaking())) {
+        setListenUi(false);
+        if (course && meta && meta.id) renderCourse(course.moduleId);
+      }
     } catch (err) {
       if (statusTimer) { clearInterval(statusTimer); statusTimer = null; }
       setListenUi(false);
@@ -765,12 +875,13 @@
     }
 
     if (!course || course.moduleId !== modId) {
-      course = { moduleId: modId, index: 0, cleared: {}, figCleared: {}, spiralCleared: {}, termCleared: {}, check: null, figCheck: null, spiralCheck: null, termCheckState: null };
+      course = { moduleId: modId, index: 0, cleared: {}, figCleared: {}, spiralCleared: {}, termCleared: {}, audioHeard: {}, check: null, figCheck: null, spiralCheck: null, termCheckState: null };
     }
     if (!course.cleared) course.cleared = {};
     if (!course.figCleared) course.figCleared = {};
     if (!course.spiralCleared) course.spiralCleared = {};
     if (!course.termCleared) course.termCleared = {};
+    if (!course.audioHeard) course.audioHeard = {};
     if (course.index < 0) course.index = 0;
     if (course.index >= m.course.sections.length) course.index = m.course.sections.length - 1;
 
@@ -809,22 +920,38 @@
     const spiralHtml = primaryCheckCleared(section) ? renderSpiralRecall(modId, section) : '';
 
     const blocked = !sectionCheckCleared(section);
+    const audioBlocked = audioBlocksAdvance(section);
+    const nextLocked = blocked || audioBlocked;
     const isLast = idx === sections.length - 1;
-    const nextDisabled = blocked ? 'disabled' : '';
+    const nextDisabled = nextLocked ? 'disabled' : '';
+    const escort = audioEscortOn();
+    const ttsReady = !!(window.AITrainer && AITrainer.isTtsReady && AITrainer.isTtsReady());
+    const heard = !!(course.audioHeard && course.audioHeard[section.id]);
+    const posLabel = `Module ${m.number != null ? m.number : m.id} · Section ${idx + 1} of ${sections.length}`;
 
     view.innerHTML = `
       <a class="backlink" href="#study/${encodeURIComponent(m.id)}">← Study clip</a>
-      ${pageHead(`Module ${m.number != null ? m.number : m.id} · Course`, m.title, `Section ${idx + 1} of ${sections.length}`)}
+      ${pageHead(`Module ${m.number != null ? m.number : m.id} · Course`, m.title, posLabel)}
 
-      <div class="course-progress" aria-hidden="true">
+      <div class="course-progress" role="progressbar" aria-valuenow="${idx + 1}" aria-valuemin="1" aria-valuemax="${sections.length}" aria-label="${esc(posLabel)}">
         <div class="course-progress-bar" style="width:${Math.round(((idx + 1) / sections.length) * 100)}%"></div>
       </div>
+      <p class="course-where" id="courseWhere">
+        <strong>You are here:</strong> ${esc(posLabel)} — ${esc(section.title)}
+        ${heard ? '<span class="pill is-ok">Audio heard</span>' : (escort && ttsReady ? '<span class="pill is-warn">Audio pending</span>' : '')}
+      </p>
 
       <div class="section-audio-bar">
         <button type="button" class="btn btn-sm btn-primary" data-action="section-listen" aria-pressed="false">Start</button>
         <button type="button" class="btn btn-sm" data-action="audio-stop" disabled>Stop</button>
+        <button type="button" class="btn btn-sm" data-action="audio-preload" ${ttsReady ? '' : 'disabled'}>Preload</button>
         <button type="button" class="btn btn-sm" data-action="module-listen" aria-pressed="false">Play module</button>
-        <p class="hint" id="audioLiveStatus">Idle — press Start for this section.</p>
+        <span class="audio-loader" id="audioLoader" hidden aria-hidden="true"></span>
+        <p class="hint" id="audioLiveStatus">Idle — preload for no lag, then Start.</p>
+        <label class="ai-toggle audio-escort-toggle">
+          <input type="checkbox" id="audioEscortToggle" data-action="audio-escort" ${escort ? 'checked' : ''}>
+          <span>Hold Next until this section’s audio finishes</span>
+        </label>
         <p class="hint">${esc(audioEngineHint())}</p>
       </div>
 
@@ -843,12 +970,15 @@
         <button type="button" class="btn" data-action="course-prev" ${idx === 0 ? 'disabled' : ''}>Previous</button>
         <span class="course-pos">${idx + 1} / ${sections.length}</span>
         ${isLast
-          ? (blocked
-              ? `<button type="button" class="btn btn-primary" disabled>Pass check to finish</button>`
+          ? (nextLocked
+              ? `<button type="button" class="btn btn-primary" disabled>${audioBlocked && !blocked ? 'Finish audio to continue' : 'Pass check to finish'}</button>`
               : `<a class="btn btn-primary" href="#quiz/${encodeURIComponent(m.id)}">Done — Quiz</a>`)
-          : `<button type="button" class="btn btn-primary" data-action="course-next" ${nextDisabled}>Next section</button>`}
+          : `<button type="button" class="btn btn-primary" data-action="course-next" ${nextDisabled}>${audioBlocked && !blocked ? 'Next (finish audio)' : 'Next section'}</button>`}
       </div>
-      <p class="hint course-hint">Acronyms are expanded in the text. Term checks (what does X stand for?) come before scenario checks. Later modules add spiral recall. Wrong → reinforce → retry; Next stays locked until correct.</p>`;
+      <p class="hint course-hint">Acronyms are expanded in the text. Term checks come before scenario checks. With audio escort on, Next stays locked until OpenAI voice finishes for this section (or turn escort off).</p>`;
+
+    scheduleSectionPreload();
+    setListenUi(!!(window.AITrainer && AITrainer.isSpeaking && AITrainer.isSpeaking()));
   }
 
   function renderRainpoleCallouts(section) {
@@ -1132,7 +1262,10 @@
     if (!course) return false;
     const m = DataLoader.getModule(course.moduleId);
     if (!m || !m.course) return false;
-    return sectionCheckCleared(m.course.sections[course.index]);
+    const section = m.course.sections[course.index];
+    if (!sectionCheckCleared(section)) return false;
+    if (audioBlocksAdvance(section)) return false;
+    return true;
   }
 
   function rememberIntroducedTerms(section) {
@@ -2463,7 +2596,17 @@
         break;
       case 'audio-stop':
         stopPageAudio();
+        if (course) renderCourse(course.moduleId);
         break;
+      case 'audio-preload':
+        preloadCurrentSection({ quiet: false });
+        break;
+      case 'audio-escort': {
+        const box = event.target.closest('input') || document.getElementById('audioEscortToggle');
+        setAudioEscort(!!(box && box.checked));
+        if (course) renderCourse(course.moduleId);
+        break;
+      }
       case 'fig-check':
         answerFigureCheck(index);
         break;

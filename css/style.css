@@ -229,10 +229,45 @@ button { font: inherit; color: inherit; }
   border-radius: var(--radius);
   background: var(--bg-sunken);
 }
-.section-audio-bar #audioLiveStatus {
-  flex: 1 1 12rem;
-  margin: 0;
-  font-weight: 600;
+.course-where {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: .45rem .75rem;
+  margin: 0 0 .85rem;
+  font-size: .95rem;
+}
+.course-where .pill {
+  display: inline-block;
+  padding: .15rem .5rem;
+  border-radius: var(--radius-sm);
+  font-size: .75rem;
+  font-weight: 700;
+  border: 1px solid var(--border);
+}
+.course-where .pill.is-ok {
+  color: var(--ok);
+  border-color: color-mix(in srgb, var(--ok) 40%, var(--border));
+}
+.course-where .pill.is-warn {
+  color: var(--warn, #b45309);
+  border-color: color-mix(in srgb, #b45309 35%, var(--border));
+}
+.section-audio-bar .audio-loader {
+  width: 1.1rem;
+  height: 1.1rem;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent, #2563eb);
+  border-radius: 50%;
+  animation: audio-spin .7s linear infinite;
+}
+.section-audio-bar .audio-escort-toggle {
+  flex: 1 1 100%;
+  margin: .15rem 0 0;
+  font-size: .9rem;
+}
+@keyframes audio-spin {
+  to { transform: rotate(360deg); }
 }
 .section-audio-bar .btn:disabled {
   opacity: .55;
