@@ -282,8 +282,8 @@
     const playLabel = mode === 'study' ? '▶ Play clip' : '▶ Play section';
     const playReady = mode === 'study' ? 'Ready — voice cached. Press ▶ Play clip.' : 'Ready — voice cached. Press ▶ Play section.';
     const idleHint = mode === 'study'
-      ? 'Four controls: Play clip · Stop · Preload · Play course.'
-      : 'Four controls: Play section · Stop · Preload · Play module.';
+      ? 'Preload for no lag, then Play clip. Play course narrates the full Course.'
+      : 'Preload for no lag, then Play section. Escort can hold Next until audio finishes.';
     const startBtn = document.querySelector('[data-action="section-listen"]');
     const stopBtn = document.querySelector('[data-action="audio-stop"]');
     const preloadBtn = document.querySelector('[data-action="audio-preload"]');
@@ -299,7 +299,7 @@
       stopBtn.textContent = '■ Stop';
     }
     if (preloadBtn) {
-      preloadBtn.disabled = !!busy || !(window.AITrainer && AITrainer.isTtsReady && AITrainer.isTtsReady());
+      preloadBtn.disabled = !!busy;
       preloadBtn.textContent = phase === 'preparing' && !busy ? '⬇ Caching…' : '⬇ Preload';
     }
     if (loader) loader.hidden = !(phase === 'preparing');
@@ -309,8 +309,11 @@
         status.textContent = mode === 'study'
           ? 'Playing OpenAI voice for this Study clip.'
           : 'Playing OpenAI voice. Next locked until finish (if escort on).';
-      } else if (phase === 'ready') status.textContent = playReady;
-      else status.textContent = idleHint;
+      }       else if (phase === 'ready') status.textContent = playReady;
+      else {
+        const ttsReady = !!(window.AITrainer && AITrainer.isTtsReady && AITrainer.isTtsReady());
+        status.textContent = ttsReady ? idleHint : 'Listen needs an OpenAI key — use Enable Listen, or tap Play to open settings.';
+      }
     }
     const modBtn = document.querySelector('[data-action="module-listen"]');
     if (modBtn) {
@@ -327,9 +330,19 @@
     }
   }
 
-  function audioBarHtml(mode) {
+  function ensureTtsOrSetup() {
+    if (window.AITrainer && AITrainer.isTtsReady && AITrainer.isTtsReady()) return true;
+    if (window.confirm('Listen needs an OpenAI key on this device. Open AI Trainer settings now?')) {
+      location.hash = '#ai';
+    }
+    return false;
+  }
+
+  function trainerStripHtml(mode) {
     const escort = audioEscortOn();
+    const cfg = window.AITrainer && AITrainer.loadConfig ? AITrainer.loadConfig() : null;
     const ttsReady = !!(window.AITrainer && AITrainer.isTtsReady && AITrainer.isTtsReady());
+    const coachReady = !!(cfg && cfg.enabled && AITrainer.isReady && AITrainer.isReady(cfg));
     const isStudy = mode === 'study';
     const playLabel = isStudy ? '▶ Play clip' : '▶ Play section';
     const playTitle = isStudy ? 'Play this Study clip with OpenAI voice' : 'Play this section with OpenAI voice';
@@ -337,26 +350,57 @@
     const modTitle = isStudy
       ? 'Open Course and play every section in this module'
       : 'Play every section in this module';
-    const idle = isStudy
-      ? 'Four controls: Play clip · Stop · Preload · Play course.'
-      : 'Idle — use Preload for no lag, then Play section.';
+    const idle = ttsReady
+      ? (isStudy
+        ? 'Preload for no lag, then Play clip. Play course narrates the full Course.'
+        : 'Preload for no lag, then Play section. Escort can hold Next until audio finishes.')
+      : 'Listen is available once OpenAI TTS is saved under AI Trainer.';
     return `
-      <div class="section-audio-bar" data-audio-mode="${isStudy ? 'study' : 'course'}" role="group" aria-label="${isStudy ? 'Study clip audio controls' : 'Section audio controls'}">
-        <div class="audio-controls">
-          <button type="button" class="btn btn-sm btn-primary" data-action="section-listen" aria-pressed="false" title="${esc(playTitle)}">${playLabel}</button>
-          <button type="button" class="btn btn-sm" data-action="audio-stop" disabled title="Stop voice">■ Stop</button>
-          <button type="button" class="btn btn-sm" data-action="audio-preload" ${ttsReady ? '' : 'disabled'} title="Download voice now so Play has no lag">⬇ Preload</button>
-          <button type="button" class="btn btn-sm" data-action="module-listen" aria-pressed="false" title="${esc(modTitle)}">${modLabel}</button>
+      <div class="trainer-strip section-audio-bar" data-audio-mode="${isStudy ? 'study' : 'course'}" role="region" aria-label="Training controls — Listen and Ask">
+        <div class="trainer-strip-listen">
+          <div class="trainer-strip-head">
+            <span class="trainer-strip-label">Listen</span>
+            <span class="trainer-strip-meta">${ttsReady ? 'OpenAI voice ready' : 'Needs OpenAI key'}</span>
+          </div>
+          <div class="audio-controls">
+            <button type="button" class="btn btn-sm btn-primary" data-action="section-listen" aria-pressed="false" title="${esc(playTitle)}">${playLabel}</button>
+            <button type="button" class="btn btn-sm" data-action="audio-stop" disabled title="Stop voice">■ Stop</button>
+            <button type="button" class="btn btn-sm" data-action="audio-preload" title="Download voice now so Play has no lag">⬇ Preload</button>
+            <button type="button" class="btn btn-sm" data-action="module-listen" aria-pressed="false" title="${esc(modTitle)}">${modLabel}</button>
+          </div>
+          <div class="trainer-strip-status">
+            <span class="audio-loader" id="audioLoader" hidden aria-hidden="true"></span>
+            <p class="hint" id="audioLiveStatus">${esc(idle)}</p>
+          </div>
+          ${ttsReady ? '' : `<p class="trainer-strip-cta"><a class="btn btn-sm btn-primary" href="#ai">Enable Listen (OpenAI) →</a></p>`}
+          ${isStudy ? '' : `
+          <label class="ai-toggle audio-escort-toggle">
+            <input type="checkbox" id="audioEscortToggle" data-action="audio-escort" ${escort ? 'checked' : ''}>
+            <span>Hold Next until this section’s audio finishes</span>
+          </label>`}
         </div>
-        <span class="audio-loader" id="audioLoader" hidden aria-hidden="true"></span>
-        <p class="hint" id="audioLiveStatus">${esc(idle)}</p>
-        ${isStudy ? '' : `
-        <label class="ai-toggle audio-escort-toggle">
-          <input type="checkbox" id="audioEscortToggle" data-action="audio-escort" ${escort ? 'checked' : ''}>
-          <span>Hold Next until this section’s audio finishes</span>
-        </label>`}
-        <p class="hint">${esc(audioEngineHint())}</p>
+        <div class="trainer-strip-ask">
+          <div class="trainer-strip-head">
+            <span class="trainer-strip-label">Ask</span>
+            <span class="trainer-strip-meta">${coachReady ? 'Coach ready' : 'Needs DeepSeek key'}</span>
+          </div>
+          ${coachReady ? `
+            <div class="strip-ask-row">
+              <label class="sr-only" for="stripAskInput">Ask about this ${isStudy ? 'clip' : 'section'}</label>
+              <input type="text" id="stripAskInput" class="strip-ask-input" autocomplete="off" placeholder="Ask about this ${isStudy ? 'clip' : 'section'}…">
+              <button type="button" class="btn btn-sm btn-primary" data-action="strip-ask">Ask</button>
+            </div>
+            <p class="hint">Local facts first. Prefix with “ask ai:” to force DeepSeek.</p>
+          ` : `
+            <p class="hint">Talk through this material with the AI Trainer coach.</p>
+            <p class="trainer-strip-cta"><a class="btn btn-sm btn-primary" href="#ai">Enable Ask (DeepSeek) →</a></p>
+          `}
+        </div>
       </div>`;
+  }
+
+  function audioBarHtml(mode) {
+    return trainerStripHtml(mode);
   }
 
   function studyListenText(m) {
@@ -1839,7 +1883,10 @@
     const show = !!(cfg.enabled && AITrainer.isReady(cfg));
     const { section } = parseHash();
     const onContent = ['study', 'course', 'quiz', 'exam', 'delta', 'howto'].includes(section);
+    const onLesson = section === 'study' || section === 'course';
     panel.hidden = !(show && onContent);
+    /* Learning pages: keep coach expanded — Ask is part of the training surface */
+    if (show && onLesson) panel.classList.remove('is-collapsed');
     document.body.classList.toggle('ai-coach-open', !panel.hidden && !panel.classList.contains('is-collapsed'));
     const status = document.getElementById('aiCoachStatus');
     if (status) {
@@ -2676,6 +2723,7 @@
           stopPageAudio();
           break;
         }
+        if (!ensureTtsOrSetup()) break;
         audioPlaylist = null;
         const { section: routeSection, param: routeParam } = parseHash();
         if (routeSection === 'study' && routeParam) {
@@ -2700,6 +2748,7 @@
         break;
       }
       case 'module-listen': {
+        if (!ensureTtsOrSetup()) break;
         const { section: routeSection, param: routeParam } = parseHash();
         if (routeSection === 'study' && routeParam) {
           const mGo = DataLoader.getModule(routeParam);
@@ -2723,8 +2772,26 @@
         }
         break;
       case 'audio-preload':
+        if (!ensureTtsOrSetup()) break;
         preloadCurrentSection({ quiet: false });
         break;
+      case 'strip-ask': {
+        const input = document.getElementById('stripAskInput');
+        const q = input && String(input.value || '').trim();
+        if (!q) {
+          window.alert('Type a question about this material first.');
+          break;
+        }
+        const panel = document.getElementById('aiCoach');
+        if (panel) {
+          panel.hidden = false;
+          panel.classList.remove('is-collapsed');
+          document.body.classList.add('ai-coach-open');
+        }
+        if (input) input.value = '';
+        submitAiCoachQuestion(q);
+        break;
+      }
       case 'audio-escort': {
         const box = event.target.closest('input') || document.getElementById('audioEscortToggle');
         setAudioEscort(!!(box && box.checked));
@@ -2827,6 +2894,12 @@
     }
 
     if (event.key === 'Enter') {
+      if (event.target && event.target.id === 'stripAskInput') {
+        event.preventDefault();
+        const askBtn = document.querySelector('[data-action="strip-ask"]');
+        if (askBtn) askBtn.click();
+        return;
+      }
       if (section === 'quiz' && quiz) {
         if (quiz.answered) {
           event.preventDefault();
