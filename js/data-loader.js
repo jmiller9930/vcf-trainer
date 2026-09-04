@@ -155,7 +155,27 @@ window.DataLoader = (function () {
         const goal = str(lesson.goal);
         return (what || how || why) ? { what, how, why, goal } : null;
       })(),
-      checkYourself: arr(raw.checkYourself || raw.checks || raw.reconstruct).map(str).filter(Boolean)
+      checkYourself: arr(raw.checkYourself || raw.checks || raw.reconstruct).map(str).filter(Boolean),
+      study: (() => {
+        const study = raw.study || {};
+        const highlights = arr(study.highlights).map((h, hi) => ({
+          id: str(h.id) || `${id}-h${hi + 1}`,
+          title: str(h.title || h.name) || `Highlight ${hi + 1}`,
+          text: str(h.text || h.body || h.detail)
+        })).filter(h => h.text);
+        const primer = str(study.primer || study.summary || study.intro);
+        return (primer || highlights.length) ? { primer, highlights } : null;
+      })(),
+      course: (() => {
+        const course = raw.course || {};
+        const sections = arr(course.sections).map((s, si) => ({
+          id: str(s.id) || `${id}-s${si + 1}`,
+          title: str(s.title || s.name) || `Section ${si + 1}`,
+          body: str(s.body || s.text || s.content),
+          highlightIds: arr(s.highlightIds || s.highlights || s.callbacks).map(str).filter(Boolean)
+        })).filter(s => s.body || s.title);
+        return sections.length ? { sections } : null;
+      })()
     };
   }
 

@@ -22,6 +22,7 @@
 
   let quiz = null;   // { filter, question, answered, chosen, correct, asked }
   let exam = null;   // { phase, ids, answers, index, endsAt, timerId, startedAt, result }
+  let course = null; // { moduleId, index }
 
   /* ====================================================================== */
   /* Helpers                                                                */
@@ -178,9 +179,10 @@
   });
 
   function setActiveNav(section) {
+    const active = section === 'course' ? 'study' : section;
     document.querySelectorAll('.nav-link').forEach(link => {
-      link.classList.toggle('active', link.dataset.section === section);
-      if (link.dataset.section === section) link.setAttribute('aria-current', 'page');
+      link.classList.toggle('active', link.dataset.section === active);
+      if (link.dataset.section === active) link.setAttribute('aria-current', 'page');
       else link.removeAttribute('aria-current');
     });
   }
@@ -213,8 +215,8 @@
           <h3>${esc(m.title)}</h3>
           <p class="module-summary">${esc(m.summary)}</p>
           <div class="module-meta">
-            <span>${m.components.length} components</span>
-            <span>${m.decisions.length} design decisions</span>
+            <span>${(m.study && m.study.highlights.length) || 0} study clips</span>
+            <span>${(m.course && m.course.sections.length) || 0} course sections</span>
             <span>${qCount} questions</span>
             ${stats.dueToday ? `<span class="badge badge-soft">${stats.dueToday} due</span>` : ''}
           </div>
@@ -224,110 +226,14 @@
 
     view.innerHTML = `
       ${dataNotice()}
-      ${pageHead('Study', 'Modules', 'Component reference, key facts and design decisions for each exam area.')}
+      ${pageHead('Study', 'Modules', 'Each module starts with a short Study clip (what to watch for), then a full Course presentation that teaches the material and points back to those clips.')}
       <div class="card-grid">${cards}</div>`;
   }
 
-  function componentCard(c) {
-    const url = safeUrl(c.sourceUrl);
-    return `
-      <article class="component-card">
-        <header class="component-card-head">
-          <h4>${esc(c.name)}</h4>
-          ${c.delta91 ? badge91 : ''}
-        </header>
-        <div class="whw">
-          ${c.what ? `<div class="whw-block whw-what"><h4>What</h4><p>${esc(c.what)}</p></div>` : ''}
-          ${c.how ? `<div class="whw-block whw-how"><h4>How</h4><p>${esc(c.how)}</p></div>` : ''}
-          ${c.why ? `<div class="whw-block whw-why"><h4>Why / best practice</h4><p>${esc(c.why)}</p></div>` : ''}
-        </div>
-        ${c.examTip ? `<div class="exam-tip"><h4>Exam tip</h4><p>${esc(c.examTip)}</p></div>` : ''}
-        ${url ? `<a class="source-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer">${esc(c.sourceTitle)}</a>` : ''}
-      </article>`;
-  }
-
-  function lessonBlock(lesson) {
-    if (!lesson || !(lesson.what || lesson.how || lesson.why)) return '';
-    return `
-      <section class="section lesson-section">
-        <h3><span class="step-num">1</span> Understand<span class="section-count">What · How · Why</span></h3>
-        ${lesson.goal ? `<p class="lesson-goal">${esc(lesson.goal)}</p>` : ''}
-        <div class="lesson-grid">
-          ${lesson.what ? `<div class="whw-block whw-what"><h4>What</h4><p>${esc(lesson.what)}</p></div>` : ''}
-          ${lesson.how ? `<div class="whw-block whw-how"><h4>How it works</h4><p>${esc(lesson.how)}</p></div>` : ''}
-          ${lesson.why ? `<div class="whw-block whw-why"><h4>Why / best practice</h4><p>${esc(lesson.why)}</p></div>` : ''}
-        </div>
-      </section>`;
-  }
-
-  function checkBlock(checks) {
-    if (!checks || !checks.length) return '';
-    return `
-      <section class="section check-section">
-        <h3><span class="step-num">3</span> Check yourself<span class="section-count">${checks.length}</span></h3>
-        <p class="section-lead">Cover the page. Answer out loud. If you cannot explain the mechanism, do not go to the quiz yet — that would only train memorization.</p>
-        <ol class="check-list">
-          ${checks.map(q => `<li>${esc(q)}</li>`).join('')}
-        </ol>
-      </section>`;
-  }
-
-  function decisionCard(d) {
-    const trace = d.traceability.length
-      ? `<table class="trace"><tbody>${d.traceability
-          .map(t => `<tr><th>${esc(t.label)}</th><td>${esc(t.value)}</td></tr>`)
-          .join('')}</tbody></table>`
-      : '';
-
-    return `
-      <details class="disclosure dd-teach">
-        <summary>
-          <span class="summary-title">${esc(d.title)}</span>
-          ${d.delta91 ? badge91 : ''}
-        </summary>
-        <div class="disclosure-body dd-body">
-          ${d.question ? `
-            <div class="dd-field">
-              <span class="dd-label">Scenario</span>
-              <span class="dd-value">${esc(d.question)}</span>
-            </div>` : ''}
-          ${d.decisionRule ? `
-            <div class="dd-field is-rule">
-              <span class="dd-label">Decision rule (learn this)</span>
-              <span class="dd-value">${esc(d.decisionRule)}</span>
-            </div>` : ''}
-          ${d.recommendation ? `
-            <div class="dd-field is-reco">
-              <span class="dd-label">RFS recommendation (apply the rule)</span>
-              <span class="dd-value">${esc(d.recommendation)}${d.confidence ? ` <em>(${esc(d.confidence)})</em>` : ''}</span>
-            </div>` : ''}
-          ${d.rationale ? `
-            <div class="dd-field">
-              <span class="dd-label">Why this evidence wins</span>
-              <span class="dd-value">${esc(d.rationale)}</span>
-            </div>` : ''}
-          ${d.alternative ? `
-            <div class="dd-field">
-              <span class="dd-label">Why the alternative loses</span>
-              <span class="dd-value">${esc(d.alternative)}</span>
-            </div>` : ''}
-          ${d.amprs.length ? `
-            <div class="dd-field">
-              <span class="dd-label">AMPRS trade-off</span>
-              <div class="chips">${d.amprs.map(a => `<span class="chip chip-amprs">${esc(a)}</span>`).join('')}</div>
-            </div>` : ''}
-          ${d.relatedComponents && d.relatedComponents.length ? `
-            <div class="dd-field">
-              <span class="dd-label">Components you must understand first</span>
-              <div class="chips">${d.relatedComponents.map(c => `<span class="chip">${esc(c)}</span>`).join('')}</div>
-            </div>` : ''}
-          ${trace ? `
-            <div class="dd-field">
-              <span class="dd-label">Traceability</span>
-              ${trace}
-            </div>` : ''}
-        </div>
-      </details>`;
+  function highlightMap(m) {
+    const map = {};
+    ((m.study && m.study.highlights) || []).forEach(h => { map[h.id] = h; });
+    return map;
   }
 
   function renderModule(modId) {
@@ -338,75 +244,127 @@
     }
 
     const stats = QuizEngine.getProgress().byModule[m.id] || { total: 0, mastery: 0, dueToday: 0 };
-    const deltaItems = DataLoader.getDelta().filter(item => item.modules.includes(m.id));
+    const study = m.study || { primer: m.summary, highlights: [] };
+    const hasCourse = !!(m.course && m.course.sections.length);
 
-    const section = (title, count, body) => `
-      <section class="section">
-        <h3>${esc(title)}<span class="section-count">${count}</span></h3>
-        ${body}
-      </section>`;
+    const highlightCards = (study.highlights || []).map((h, i) => `
+      <article class="highlight-card">
+        <span class="highlight-num">${i + 1}</span>
+        <div>
+          <h4>${esc(h.title)}</h4>
+          <p>${esc(h.text)}</p>
+        </div>
+      </article>`).join('');
 
     view.innerHTML = `
       <a class="backlink" href="#study">← All modules</a>
-      ${pageHead(`Module ${m.number}${m.exam ? ` · ${m.exam}` : ''}`, m.title, m.summary)}
+      ${pageHead(`Module ${m.number} · Study clip`, m.title, m.summary)}
 
       <div class="learn-path" role="note">
-        <strong>How to use this module:</strong>
-        Understand the mechanism → check yourself without notes → apply the decision rule to RFS → then quiz.
-        The quiz rewards understanding. Memorizing letter answers will fail you on a reworded scenario.
+        <strong>How this works:</strong>
+        This Study clip is the primer — what to hang onto.
+        Then open <em>Course</em> for the full presentation. The Course will point back to these clips as you go.
       </div>
 
       <div class="quiz-bar">
         <span class="score-pill">${pct(stats.mastery)} <span>mastery</span></span>
         <span class="score-pill">${stats.total} <span>questions</span></span>
-        ${stats.dueToday ? `<span class="score-pill">${stats.dueToday} <span>due today</span></span>` : ''}
         <span class="spacer"></span>
-        <a class="btn btn-sm btn-primary" href="#quiz/${encodeURIComponent(m.id)}">Step 5 · Quiz</a>
+        ${hasCourse
+          ? `<a class="btn btn-sm btn-primary" href="#course/${encodeURIComponent(m.id)}">Start Course</a>`
+          : ''}
+        <a class="btn btn-sm" href="#quiz/${encodeURIComponent(m.id)}">Quiz</a>
       </div>
 
-      ${lessonBlock(m.lesson)}
+      <section class="section">
+        <h3>Primer</h3>
+        <p class="primer-text">${esc(study.primer || m.summary)}</p>
+      </section>
 
-      ${m.components.length ? section('2 · Component deep dive', m.components.length,
-        `<p class="section-lead">Each component is What → How → Why. Read until you can teach it without looking.</p>
-         <div class="component-stack">${m.components.map(componentCard).join('')}</div>`) : ''}
+      ${(study.highlights || []).length ? `
+        <section class="section">
+          <h3>Watch for these<span class="section-count">${study.highlights.length}</span></h3>
+          <p class="section-lead">Hang onto these while you take the Course. The presenter will call them back.</p>
+          <div class="highlight-stack">${highlightCards}</div>
+        </section>` : ''}
 
-      ${checkBlock(m.checkYourself)}
+      ${m.checkYourself && m.checkYourself.length ? `
+        <section class="section check-section">
+          <h3>After the Course — check yourself<span class="section-count">${m.checkYourself.length}</span></h3>
+          <p class="section-lead">Do these only after you finish the Course presentation.</p>
+          <ol class="check-list">
+            ${m.checkYourself.map(q => `<li>${esc(q)}</li>`).join('')}
+          </ol>
+        </section>` : ''}
 
-      ${m.keyFacts.length ? section('Remember cold', m.keyFacts.length,
-        `<p class="section-lead">Facts that show up in sizing and elimination questions — still tied to the mechanisms above.</p>
-         <ul class="factlist">${m.keyFacts.map(f =>
-          `<li class="fact"><span>${esc(f.text)} ${f.delta91 ? badge91 : ''}</span></li>`).join('')}</ul>`) : ''}
+      <div class="cta-row">
+        ${hasCourse
+          ? `<a class="btn btn-primary" href="#course/${encodeURIComponent(m.id)}">Start Course presentation</a>`
+          : ''}
+        <a class="btn" href="#quiz/${encodeURIComponent(m.id)}">Skip to Quiz</a>
+      </div>`;
+  }
 
-      ${m.attention.length ? section('Common traps', m.attention.length,
-        `<p class="section-lead">These are wrong mental models. If you hold one, you will pick the attractive wrong option.</p>
-         ${m.attention.map(a => `
-          <div class="attention">
-            <h4>${esc(a.title)} ${a.delta91 ? badge91 : ''}</h4>
-            <p>${esc(a.text)}</p>
-          </div>`).join('')}`) : ''}
+  function renderCourse(modId) {
+    const m = DataLoader.getModule(modId);
+    if (!m || !m.course || !m.course.sections.length) {
+      view.innerHTML = `
+        <a class="backlink" href="#study/${encodeURIComponent(modId || '')}">← Study clip</a>
+        ${emptyState('This module has no Course presentation yet.')}`;
+      return;
+    }
 
-      ${m.decisions.length ? section('4 · Apply (design decisions)', m.decisions.length,
-        `<p class="section-lead">Learn the <em>decision rule</em> first. The RFS recommendation is one application of that rule — not a fact to memorize by ID.</p>
-         ${m.decisions.map(decisionCard).join('')}`) : ''}
+    if (!course || course.moduleId !== modId) {
+      course = { moduleId: modId, index: 0 };
+    }
+    if (course.index < 0) course.index = 0;
+    if (course.index >= m.course.sections.length) course.index = m.course.sections.length - 1;
 
-      ${m.vcf91Updates && m.vcf91Updates.length ? section('9.1 updates in this chapter', m.vcf91Updates.length,
-        m.vcf91Updates.map(item => `
-          <div class="delta-item">
-            <h4>${esc(item.title)} ${badge91}</h4>
-            <p>${esc(item.description)}</p>
-            ${item.impact ? `<p class="delta-detail">${esc(item.impact)}</p>` : ''}
-          </div>`).join('')) : ''}
+    const sections = m.course.sections;
+    const idx = course.index;
+    const section = sections[idx];
+    const map = highlightMap(m);
+    const callbacks = (section.highlightIds || [])
+      .map(id => map[id])
+      .filter(Boolean);
 
-      ${deltaItems.length ? section('Related 9.1 platform changes', deltaItems.length,
-        deltaItems.map(item => `
-          <div class="delta-item">
-            <h4>${esc(item.title)} ${badge91}</h4>
-            <p>${esc(item.description)}</p>
-            ${item.detail ? `<p class="delta-detail">${esc(item.detail)}</p>` : ''}
-          </div>`).join('')) : ''}
+    const paras = esc(section.body).split(/\n\n+/).map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
 
-      ${!m.components.length && !m.keyFacts.length && !m.attention.length && !m.decisions.length && !(m.lesson && (m.lesson.what || m.lesson.how || m.lesson.why))
-        ? emptyState('This module has no published content yet.') : ''}`;
+    const callbackBlock = callbacks.length
+      ? `<aside class="course-callback" role="note">
+           <h4>From the Study clip</h4>
+           ${callbacks.map(h => `
+             <div class="callback-item">
+               <strong>${esc(h.title)}</strong>
+               <p>${esc(h.text)}</p>
+             </div>`).join('')}
+         </aside>`
+      : '';
+
+    const isLast = idx === sections.length - 1;
+
+    view.innerHTML = `
+      <a class="backlink" href="#study/${encodeURIComponent(m.id)}">← Study clip</a>
+      ${pageHead(`Module ${m.number} · Course`, m.title, `Section ${idx + 1} of ${sections.length}`)}
+
+      <div class="course-progress" aria-hidden="true">
+        <div class="course-progress-bar" style="width:${Math.round(((idx + 1) / sections.length) * 100)}%"></div>
+      </div>
+
+      <article class="course-stage">
+        <h3 class="course-section-title">${esc(section.title)}</h3>
+        ${callbackBlock}
+        <div class="course-body">${paras}</div>
+      </article>
+
+      <div class="course-nav">
+        <button type="button" class="btn" data-action="course-prev" ${idx === 0 ? 'disabled' : ''}>Previous</button>
+        <span class="course-pos">${idx + 1} / ${sections.length}</span>
+        ${isLast
+          ? `<a class="btn btn-primary" href="#quiz/${encodeURIComponent(m.id)}">Done — Quiz</a>`
+          : `<button type="button" class="btn btn-primary" data-action="course-next">Next section</button>`}
+      </div>
+      <p class="hint course-hint">One section at a time so you keep focus. Study clips appear when this section hits something you were told to watch for.</p>`;
   }
 
   /* ====================================================================== */
@@ -987,6 +945,9 @@
       case 'study':
         param ? renderModule(param) : renderStudy();
         break;
+      case 'course':
+        param ? renderCourse(param) : location.replace('#study');
+        break;
       case 'quiz':
         renderQuiz(param);
         break;
@@ -1024,6 +985,17 @@
     switch (target.dataset.action) {
       case 'quiz-answer': answerQuiz(index); break;
       case 'quiz-next':   nextQuizQuestion(); break;
+      case 'course-prev':
+        if (course) { course.index = Math.max(0, course.index - 1); renderCourse(course.moduleId); }
+        break;
+      case 'course-next':
+        if (course) {
+          const m = DataLoader.getModule(course.moduleId);
+          const max = m && m.course ? m.course.sections.length - 1 : 0;
+          course.index = Math.min(max, course.index + 1);
+          renderCourse(course.moduleId);
+        }
+        break;
       case 'exam-start':  startExam(); break;
       case 'exam-answer': answerExam(index); break;
       case 'exam-goto':   gotoExamQuestion(index); break;
@@ -1055,6 +1027,10 @@
     if (event.key === 'Escape') {
       if (document.body.classList.contains('nav-open')) { setNav(false); return; }
       if (section === 'study' && parseHash().param) { location.hash = '#study'; return; }
+      if (section === 'course' && parseHash().param) {
+        location.hash = `#study/${encodeURIComponent(parseHash().param)}`;
+        return;
+      }
       if (section !== 'study') { location.hash = '#study'; }
       return;
     }
@@ -1079,6 +1055,16 @@
       if (section === 'quiz' && quiz && quiz.answered) {
         event.preventDefault();
         nextQuizQuestion();
+      } else if (section === 'course' && course) {
+        event.preventDefault();
+        const m = DataLoader.getModule(course.moduleId);
+        const max = m && m.course ? m.course.sections.length - 1 : 0;
+        if (course.index < max) {
+          course.index += 1;
+          renderCourse(course.moduleId);
+        } else if (m) {
+          location.hash = `#quiz/${encodeURIComponent(m.id)}`;
+        }
       } else if (section === 'exam' && exam && exam.phase === 'running' && exam.index < exam.ids.length - 1) {
         event.preventDefault();
         gotoExamQuestion(exam.index + 1);
