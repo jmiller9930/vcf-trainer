@@ -13,7 +13,12 @@
     "correctIndex": 1,
     "explanation": "All design decisions are driven by the conceptual model. Product preference, examples and cost are not evidence; the requirements, constraints, assumptions and risks captured in the conceptual model are.",
     "relatedDD": null,
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "conceptual model",
+      "logical design"
+    ],
+    "spiral": true
   },
   {
     "id": "q2",
@@ -29,7 +34,12 @@
     "correctIndex": 2,
     "explanation": "Existing infrastructure that must be reused is a boundary on the designer's freedom of choice, which is the definition of a constraint. In the case study the existing network is recorded as constraint C02.",
     "relatedDD": "DD-402",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "spine",
+      "leaf"
+    ],
+    "spiral": true
   },
   {
     "id": "q3",
@@ -61,7 +71,11 @@
     "correctIndex": 1,
     "explanation": "A functional requirement states what the solution does; a non-functional requirement states how well it must do it, expressed as a measurable target such as availability percentage, latency ceiling or recovery time objective.",
     "relatedDD": null,
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "availability"
+    ],
+    "spiral": true
   },
   {
     "id": "q5",
@@ -77,7 +91,11 @@
     "correctIndex": 2,
     "explanation": "Conflicting statements are surfaced explicitly as a conflict or risk with a named owner. Reconciling it by assuming the optimistic case, ignoring it, or quietly changing the plan all hide a condition that could cause the design to fail.",
     "relatedDD": null,
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "conceptual model"
+    ],
+    "spiral": true
   },
   {
     "id": "q6",
@@ -141,7 +159,16 @@
     "correctIndex": 1,
     "explanation": "Layer 3 spine-leaf is already the topology Broadcom recommends for VCF, and it is a constraint. The work is therefore validation, principally end-to-end MTU on the tunnel endpoint path, per-rack subnets with highly available gateways, and BGP peering capability.",
     "relatedDD": "DD-402",
-    "vcf91Note": "VCF 9.1 adds Distributed EVPN-VXLAN interoperability, so if the existing fabric already runs EVPN-VXLAN it can integrate directly without centralised gateway appliances in the data path."
+    "vcf91Note": "VCF 9.1 adds Distributed EVPN-VXLAN interoperability, so if the existing fabric already runs EVPN-VXLAN it can integrate directly without centralised gateway appliances in the data path.",
+    "terms": [
+      "NSX",
+      "overlay",
+      "underlay",
+      "MTU",
+      "spine",
+      "leaf"
+    ],
+    "spiral": true
   },
   {
     "id": "q10",
@@ -157,7 +184,15 @@
     "correctIndex": 1,
     "explanation": "Multi-rack distributes a cluster's hosts across racks so the loss of a rack does not take the cluster down, and it allows growth beyond one rack's capacity. It increases VLAN and subnet management rather than reducing it, and the benefit depends on the racks being genuinely independent failure domains.",
     "relatedDD": "DD-403",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "NSX",
+      "Edge",
+      "vSphere",
+      "cluster",
+      "MTU"
+    ],
+    "spiral": true
   },
   {
     "id": "q11",
@@ -173,7 +208,16 @@
     "correctIndex": 0,
     "explanation": "Geneve encapsulation adds roughly 100 bytes, so every hop on the tunnel endpoint path must carry the larger frame. The floor is 1600 bytes, 1700 is recommended and 9000 is optimal, and physical switches, routers, the VDS, port groups, VMkernel adapters and the NSX global setting must all agree.",
     "relatedDD": "DD-402",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "Geneve",
+      "NSX",
+      "VDS",
+      "overlay",
+      "MTU",
+      "vCenter"
+    ],
+    "spiral": true
   },
   {
     "id": "q12",
@@ -189,7 +233,14 @@
     "correctIndex": 2,
     "explanation": "vSAN ESA is the principal storage model for VCF 9 and suits all-NVMe hardware. It keeps the management plane's storage self-contained and removes any dependency on the retiring SAN. OSA would forgo ESA's performance and efficiency on this hardware.",
     "relatedDD": "DD-501",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vSAN",
+      "management domain",
+      "OSA",
+      "ESA"
+    ],
+    "spiral": true
   },
   {
     "id": "q13",
@@ -205,7 +256,11 @@
     "correctIndex": 0,
     "explanation": "Consumed capacity is one input among several. Sizing also needs the performance profile, the growth rate, and the capacity overhead implied by the chosen failures-to-tolerate policy and data placement scheme, which ranges from 1.25x to 4x.",
     "relatedDD": "DD-502",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vSAN"
+    ],
+    "spiral": true
   },
   {
     "id": "q14",
@@ -221,7 +276,11 @@
     "correctIndex": 0,
     "explanation": "SPBM expresses storage requirements as policies attached to virtual machines and individual virtual disks rather than as properties of a datastore. It places objects on compatible storage, instantiates the requested data services, and reports compliance continuously.",
     "relatedDD": "DD-502",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vSAN"
+    ],
+    "spiral": true
   },
   {
     "id": "q15",
@@ -237,7 +296,14 @@
     "correctIndex": 1,
     "explanation": "ESA is scale-out and policy-driven, so one cluster can serve workloads with different failures-to-tolerate settings and data placement schemes simultaneously. Resilience still costs capacity, but the level is chosen per workload rather than per datastore.",
     "relatedDD": "DD-502",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vSAN",
+      "cluster",
+      "workload domain",
+      "ESA"
+    ],
+    "spiral": true
   },
   {
     "id": "q16",
@@ -253,7 +319,13 @@
     "correctIndex": 2,
     "explanation": "With one site and no validated second zone, the single-site centralised management model is correct. It gives the lowest operational complexity and consistent management, and the site-level exposure is recorded as an accepted risk mitigated by backup and recovery.",
     "relatedDD": "DD-602",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "workload domain",
+      "availability",
+      "witness"
+    ],
+    "spiral": true
   },
   {
     "id": "q17",
@@ -269,7 +341,12 @@
     "correctIndex": 1,
     "explanation": "High availability mode deploys the components as three-node clusters. For VCF Operations the nodes are a primary, a replica and a data node, and an external load balancer is an optional addition rather than the mechanism itself.",
     "relatedDD": "DD-603",
-    "vcf91Note": "In VCF 9.1 these components are hosted on the shared VCF services runtime rather than as separate appliances, which also unifies their backup and recovery."
+    "vcf91Note": "In VCF 9.1 these components are hosted on the shared VCF services runtime rather than as separate appliances, which also unifies their backup and recovery.",
+    "terms": [
+      "vSphere",
+      "availability"
+    ],
+    "spiral": true
   },
   {
     "id": "q18",
@@ -285,7 +362,14 @@
     "correctIndex": 1,
     "explanation": "Appliance mode is a three-node cluster with an internal load balancer that tolerates a node failure, can serve up to five VCF instances, and does not depend on the management domain vCenter being available. Federating to the enterprise identity provider keeps account lifecycle and multi-factor policy under existing governance.",
     "relatedDD": "DD-607",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "cluster",
+      "workload domain",
+      "management domain",
+      "vCenter"
+    ],
+    "spiral": true
   },
   {
     "id": "q19",
@@ -333,7 +417,14 @@
     "correctIndex": 1,
     "explanation": "A dedicated workload domain gives its own vCenter, independent lifecycle, and a failure and contention boundary separate from the management plane. Building it new and migrating in also keeps the source environment running as a fallback. The management domain never hosts user workloads.",
     "relatedDD": "DD-701",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "cluster",
+      "workload domain",
+      "management domain",
+      "vCenter"
+    ],
+    "spiral": true
   },
   {
     "id": "q22",
@@ -349,7 +440,12 @@
     "correctIndex": 0,
     "explanation": "FTT is failures to tolerate: the number of concurrent host or device failures the object's data must survive. Combined with the data placement method it determines capacity overhead and the minimum host count.",
     "relatedDD": "DD-705",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vSAN",
+      "FTT"
+    ],
+    "spiral": true
   },
   {
     "id": "q23",
@@ -365,7 +461,16 @@
     "correctIndex": 0,
     "explanation": "VPC provides an isolated domain of networking resources with its own address space, subnets, routing and outbound NAT, created declaratively through Kubernetes custom resources. VDS-backed and NSX classic stacks are also supported, but they do not unlock the full capability set.",
     "relatedDD": "DD-706",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "NSX",
+      "VDS",
+      "cluster",
+      "VPC",
+      "overlay",
+      "NSX Manager"
+    ],
+    "spiral": true
   },
   {
     "id": "q24",
@@ -381,7 +486,13 @@
     "correctIndex": 1,
     "explanation": "All north-south traffic and centralised services traverse the Edge cluster, so its bandwidth demands, failure behaviour and upgrade cadence differ from tenant workloads. Dedicating it separates those concerns, at the cost of additional hosts.",
     "relatedDD": "DD-707",
-    "vcf91Note": "VCF 9.1's Distributed EVPN-VXLAN option can remove centralised gateway appliances from the north-south data path, which changes Edge node sizing."
+    "vcf91Note": "VCF 9.1's Distributed EVPN-VXLAN option can remove centralised gateway appliances from the north-south data path, which changes Edge node sizing.",
+    "terms": [
+      "NSX",
+      "Edge",
+      "cluster"
+    ],
+    "spiral": true
   },
   {
     "id": "q25",
@@ -397,7 +508,12 @@
     "correctIndex": 1,
     "explanation": "Host groups bind the workload class to the correct hosts through a VM-Host rule, while VM-VM anti-affinity keeps the redundant members on separate hosts. Neither resource pools nor storage policies nor admission control control host placement in this way.",
     "relatedDD": "DD-708",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "FTT",
+      "vSphere"
+    ],
+    "spiral": true
   },
   {
     "id": "q26",
@@ -413,7 +529,11 @@
     "correctIndex": 0,
     "explanation": "Allocation records a request. Tripling an already over-provisioned allocation produces a grossly oversized and expensive design. Measured consumption plus a validated growth rate is the correct basis.",
     "relatedDD": "DD-701",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vCenter"
+    ],
+    "spiral": true
   },
   {
     "id": "q27",
@@ -429,7 +549,13 @@
     "correctIndex": 1,
     "explanation": "AMPRS is Availability, Manageability, Performance, Recoverability and Security. It is applied to design decisions to state the trade-off each one creates, not only the benefit.",
     "relatedDD": null,
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "AMPRS",
+      "availability",
+      "recoverability"
+    ],
+    "spiral": true
   },
   {
     "id": "q28",
@@ -445,7 +571,11 @@
     "correctIndex": 1,
     "explanation": "High availability uses redundancy already in place so a surviving component takes over after a failure. It cannot help with deletion, corruption or ransomware, because every replica faithfully reflects the damage. Backup holds an independent copy that can be restored.",
     "relatedDD": "DD-801",
-    "vcf91Note": "VCF 9.1 adds on-premises ransomware recovery into isolated clean rooms with CrowdStrike Falcon validation, addressing exactly the class of failure high availability cannot cover."
+    "vcf91Note": "VCF 9.1 adds on-premises ransomware recovery into isolated clean rooms with CrowdStrike Falcon validation, addressing exactly the class of failure high availability cannot cover.",
+    "terms": [
+      "availability"
+    ],
+    "spiral": true
   },
   {
     "id": "q29",
@@ -461,7 +591,13 @@
     "correctIndex": 0,
     "explanation": "The prerequisites are physical facts, not configuration options: two genuinely independent failure domains, no more than 5 ms round trip between data sites, and an independent third location hosting the witness that arbitrates quorum.",
     "relatedDD": "DD-801",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "cluster",
+      "witness",
+      "stretched cluster"
+    ],
+    "spiral": true
   },
   {
     "id": "q30",
@@ -477,7 +613,12 @@
     "correctIndex": 1,
     "explanation": "All Apps organizations are backed by vSphere Supervisor and vSphere namespaces and expose the full built-in cloud services catalogue including virtual machines and Kubernetes. VM Apps organizations run VM-based applications only and exist as a transition path for Aria Automation users.",
     "relatedDD": "DD-902",
-    "vcf91Note": "In VCF 9.1 both organization models can run simultaneously and share the same vCenter and NSX, so adopting All Apps no longer requires separate infrastructure."
+    "vcf91Note": "In VCF 9.1 both organization models can run simultaneously and share the same vCenter and NSX, so adopting All Apps no longer requires separate infrastructure.",
+    "terms": [
+      "vSphere",
+      "Aria"
+    ],
+    "spiral": true
   },
   {
     "id": "q31",
@@ -493,7 +634,12 @@
     "correctIndex": 1,
     "explanation": "A namespace bounds compute and storage quota, assigned networks, storage class access and identity permissions simultaneously, which makes it the platform's real security boundary. Naming conventions enforce nothing.",
     "relatedDD": "DD-903",
-    "vcf91Note": "VCF 9.1 adds self-service namespace provisioning with registry, ingress, quotas and identity inherited from existing VCF constructs."
+    "vcf91Note": "VCF 9.1 adds self-service namespace provisioning with registry, ingress, quotas and identity inherited from existing VCF constructs.",
+    "terms": [
+      "vSphere",
+      "VPC"
+    ],
+    "spiral": true
   },
   {
     "id": "q32",
@@ -541,7 +687,11 @@
     "correctIndex": 0,
     "explanation": "Keeping the consumption plane in one management zone keeps its operational model simple, while isolating tenant workloads into their own zones prevents a tenant from exhausting the capacity the platform's own services need and aligns blast radius to cluster boundaries.",
     "relatedDD": "DD-906",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "cluster"
+    ],
+    "spiral": true
   },
   {
     "id": "q35",
@@ -621,7 +771,12 @@
     "correctIndex": 2,
     "explanation": "RAV combines bulk migration's parallelism, resiliency and scheduling with vMotion's zero-downtime state transfer. Bulk's interruption is reboot-equivalent, vMotion is serial and does not scale, and cold migration requires the workload to be powered off.",
     "relatedDD": "DD-1101",
-    "vcf91Note": "VCF 9.1 introduces no significant changes to the HCX migration methods."
+    "vcf91Note": "VCF 9.1 introduces no significant changes to the HCX migration methods.",
+    "terms": [
+      "vMotion",
+      "workload domain"
+    ],
+    "spiral": true
   },
   {
     "id": "q40",
@@ -637,7 +792,12 @@
     "correctIndex": 0,
     "explanation": "Bulk migration replicates in parallel while the source keeps running, then interrupts service for roughly the duration of a reboot at switchover. Zero downtime calls for RAV or vMotion, powered-off workloads use cold migration, and non-vSphere guests use OS Assisted Migration.",
     "relatedDD": "DD-1101",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vMotion",
+      "vSphere"
+    ],
+    "spiral": true
   },
   {
     "id": "q41",
@@ -653,7 +813,12 @@
     "correctIndex": 0,
     "explanation": "RCAR is the classification scheme for sorting raw customer input into Requirements, Constraints, Assumptions and Risks. Its output is the numbered evidence set that every later design decision cites.",
     "relatedDD": null,
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "RCAR",
+      "availability"
+    ],
+    "spiral": true
   },
   {
     "id": "q42",
@@ -669,7 +834,12 @@
     "correctIndex": 1,
     "explanation": "An assumption is believed but unverified. Logging it creates a validation task, and traceability means that if it is later invalidated you can enumerate every decision that must be revisited. Skipping validation because the customer sounded confident is the classic error.",
     "relatedDD": null,
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "RCAR",
+      "traceability"
+    ],
+    "spiral": true
   },
   {
     "id": "q43",
@@ -685,7 +855,11 @@
     "correctIndex": 1,
     "explanation": "Traceability makes the design a graph from business evidence to physical configuration. Reading forward from an identifier shows which decisions depend on it; reading backwards from a decision shows why it exists, which is what makes review possible without the author present.",
     "relatedDD": null,
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "traceability"
+    ],
+    "spiral": true
   },
   {
     "id": "q44",
@@ -701,7 +875,14 @@
     "correctIndex": 1,
     "explanation": "The workbook is the design-to-deploy handoff artefact, enumerating every prerequisite and input value the deployment needs. Design rationale, RCAR classification and AMPRS impact live in the design decision records instead.",
     "relatedDD": null,
-    "vcf91Note": "In VCF 9.1 the Cloud Builder spreadsheet workflow is replaced by the guided VCF Installer flow, which can also import JSON configuration templates, but the planning workbook remains the design-to-deploy artefact."
+    "vcf91Note": "In VCF 9.1 the Cloud Builder spreadsheet workflow is replaced by the guided VCF Installer flow, which can also import JSON configuration templates, but the planning workbook remains the design-to-deploy artefact.",
+    "terms": [
+      "AMPRS",
+      "RCAR",
+      "MTU",
+      "Planning and Preparation"
+    ],
+    "spiral": true
   },
   {
     "id": "q45",
@@ -717,7 +898,11 @@
     "correctIndex": 2,
     "explanation": "A measurable quality target such as an availability percentage, latency ceiling or recovery time objective is a non-functional requirement. A functional requirement would name a capability the solution must provide.",
     "relatedDD": null,
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "availability"
+    ],
+    "spiral": true
   },
   {
     "id": "q46",
@@ -733,7 +918,16 @@
     "correctIndex": 0,
     "explanation": "The VDS is defined centrally in vCenter and applied uniformly across the cluster, providing consistent port groups, uplink teaming, VLAN tagging and MTU. Per-host configuration describes the standard switch, and BGP peering is an NSX Edge function.",
     "relatedDD": "DD-606",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "NSX",
+      "VDS",
+      "Edge",
+      "vSphere",
+      "cluster",
+      "MTU"
+    ],
+    "spiral": true
   },
   {
     "id": "q47",
@@ -749,7 +943,16 @@
     "correctIndex": 1,
     "explanation": "VMkernel adapters are the host's IP endpoints for infrastructure traffic, as distinct from workload traffic which terminates on virtual machine vNICs. Separating them onto dedicated interfaces and VLANs allows independent MTU, quality of service and failure isolation per traffic type.",
     "relatedDD": null,
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vMotion",
+      "NSX",
+      "vSAN",
+      "overlay",
+      "MTU",
+      "segment"
+    ],
+    "spiral": true
   },
   {
     "id": "q48",
@@ -765,7 +968,13 @@
     "correctIndex": 0,
     "explanation": "NSX encapsulates workload frames using Geneve, the successor to VXLAN, adding roughly 100 bytes of outer headers. VXLAN remains the generic term for tunnelled overlays and, in VCF 9.1, names the specific EVPN-VXLAN fabric interoperability feature.",
     "relatedDD": "DD-402",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "Geneve",
+      "NSX",
+      "overlay"
+    ],
+    "spiral": true
   },
   {
     "id": "q49",
@@ -781,7 +990,12 @@
     "correctIndex": 1,
     "explanation": "1600 bytes is the hard floor the installer validates by pinging tunnel endpoint to tunnel endpoint, and deployment is blocked if the check fails. 1700 is Broadcom's recommendation to absorb Geneve header growth, and 9000 is optimal for throughput.",
     "relatedDD": "DD-402",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "Geneve",
+      "MTU"
+    ],
+    "spiral": true
   },
   {
     "id": "q50",
@@ -797,7 +1011,16 @@
     "correctIndex": 1,
     "explanation": "Small frames fit within the 1500-byte fabric so basic connectivity appears healthy, but the large frames used by vSAN, vMotion and Geneve-encapsulated overlay traffic are dropped. This is why configured does not mean working, and why a do-not-fragment ping at the target size is the correct validation.",
     "relatedDD": "DD-402",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vMotion",
+      "Geneve",
+      "NSX",
+      "vSAN",
+      "VDS",
+      "overlay"
+    ],
+    "spiral": true
   },
   {
     "id": "q51",
@@ -813,7 +1036,13 @@
     "correctIndex": 1,
     "explanation": "The Layer 3 boundary sits at the top of rack, so each rack gets its own tunnel endpoint VLAN and subnet with a highly available first-hop gateway such as HSRP, VRRP or anycast, and the networks are routable between racks.",
     "relatedDD": "DD-403",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vSphere",
+      "cluster",
+      "gateway"
+    ],
+    "spiral": true
   },
   {
     "id": "q52",
@@ -829,7 +1058,11 @@
     "correctIndex": 1,
     "explanation": "Management requires two distinct VLANs: ESX host management, and a separate VM management network carrying the VCF appliances such as VCF Operations and VCF Automation. Treating management as a single VLAN is a common planning error.",
     "relatedDD": null,
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "overlay"
+    ],
+    "spiral": true
   },
   {
     "id": "q53",
@@ -845,7 +1078,13 @@
     "correctIndex": 1,
     "explanation": "The reference physical design uses redundant top-of-rack switches per rack with each host dual-attached over 802.1Q trunks, at 25 GbE with 10 GbE as the floor. Redundancy at the leaf layer is what prevents a single switch failure from isolating hosts.",
     "relatedDD": "DD-402",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "physical design",
+      "spine",
+      "leaf"
+    ],
+    "spiral": true
   },
   {
     "id": "q54",
@@ -861,7 +1100,16 @@
     "correctIndex": 1,
     "explanation": "A do-not-fragment ping at the target payload size, run between hosts in different racks and across different leaf pairs, tests the actual path. Configuration review cannot detect an intermediate Layer 3 hop that clamps the frame size, which is where the failure almost always is.",
     "relatedDD": "DD-402",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "NSX",
+      "VDS",
+      "overlay",
+      "MTU",
+      "vCenter",
+      "leaf"
+    ],
+    "spiral": true
   },
   {
     "id": "q55",
@@ -877,7 +1125,13 @@
     "correctIndex": 0,
     "explanation": "ESA uses a single-tier all-NVMe device model where every device contributes both performance and capacity. OSA groups a cache device with several capacity devices, which is why cache device sizing and failure domain are first-order OSA design concerns.",
     "relatedDD": "DD-501",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vSAN",
+      "OSA",
+      "ESA"
+    ],
+    "spiral": true
   },
   {
     "id": "q56",
@@ -893,7 +1147,16 @@
     "correctIndex": 1,
     "explanation": "ESA ingests writes into a performance leg and then writes full stripes with parity, eliminating the write amplification that made OSA erasure coding costly. Mirroring is still supported and is required for stretched-cluster site resilience and two-node host resilience, and erasure coding generally needs more hosts, not fewer.",
     "relatedDD": "DD-705",
-    "vcf91Note": "VCF 9.1 Auto-RAID formalises this by never selecting RAID-1 except for stretched-cluster site resilience and two-node host resilience."
+    "vcf91Note": "VCF 9.1 Auto-RAID formalises this by never selecting RAID-1 except for stretched-cluster site resilience and two-node host resilience.",
+    "terms": [
+      "vSAN",
+      "FTT",
+      "cluster",
+      "OSA",
+      "ESA",
+      "RAID"
+    ],
+    "spiral": true
   },
   {
     "id": "q57",
@@ -909,7 +1172,15 @@
     "correctIndex": 1,
     "explanation": "ESA presents a single RAID-5 policy rule and adapts the stripe scheme to host count: 2+1 giving 1.5x overhead below six hosts, 4+1 giving 1.25x overhead at six or more, with readjustment roughly 24 hours after a size change. The fixed 3+1 scheme is OSA.",
     "relatedDD": "DD-705",
-    "vcf91Note": "VCF 9.1 Auto-RAID always uses the 2+1 scheme when it assigns FTT=1 RAID-5; the optional 4+1 code is no longer selected."
+    "vcf91Note": "VCF 9.1 Auto-RAID always uses the 2+1 scheme when it assigns FTT=1 RAID-5; the optional 4+1 code is no longer selected.",
+    "terms": [
+      "vSAN",
+      "cluster",
+      "OSA",
+      "ESA",
+      "RAID"
+    ],
+    "spiral": true
   },
   {
     "id": "q58",
@@ -925,7 +1196,12 @@
     "correctIndex": 2,
     "explanation": "FTT=2 mirroring keeps three copies, so 100 GB consumes 300 GB. By contrast FTT=2 with RAID-6 consumes 150 GB, FTT=1 mirroring consumes 200 GB, and FTT=3 mirroring consumes 400 GB.",
     "relatedDD": "DD-705",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "FTT",
+      "RAID"
+    ],
+    "spiral": true
   },
   {
     "id": "q59",
@@ -941,7 +1217,16 @@
     "correctIndex": 1,
     "explanation": "Running at exactly the minimum leaves nowhere to rebuild after a host is lost or placed in maintenance, so the object stays non-compliant for the duration. This is why ESA recommends four hosts for FTT=1 RAID-5 and seven for FTT=2 RAID-6.",
     "relatedDD": "DD-705",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vSAN",
+      "FTT",
+      "cluster",
+      "vCenter",
+      "ESA",
+      "RAID"
+    ],
+    "spiral": true
   },
   {
     "id": "q60",
@@ -957,7 +1242,11 @@
     "correctIndex": 1,
     "explanation": "Storage providers advertise capabilities to vCenter; the policy is applied at create, clone or migrate time; SPBM places the object on matching storage, enables the requested services, and flags drift when the underlying storage no longer satisfies the policy.",
     "relatedDD": "DD-502",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vCenter"
+    ],
+    "spiral": true
   },
   {
     "id": "q61",
@@ -973,7 +1262,14 @@
     "correctIndex": 0,
     "explanation": "A ReadyNode is a configuration validated by Broadcom and the hardware vendor. vSAN ESA additionally requires ESA-certified all-NVMe ReadyNodes, because vSAN behaviour depends closely on device and controller characteristics.",
     "relatedDD": "DD-501",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vSAN",
+      "cluster",
+      "ESA",
+      "witness"
+    ],
+    "spiral": true
   },
   {
     "id": "q62",
@@ -989,7 +1285,14 @@
     "correctIndex": 1,
     "explanation": "OSA remains supported for hybrid and SAS or SATA-based hardware. It is a constraint-driven choice: you select it because the hardware forces it, accepting that newer efficiency features such as Auto-RAID and global deduplication are ESA-only.",
     "relatedDD": "DD-501",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vSAN",
+      "OSA",
+      "ESA",
+      "RAID"
+    ],
+    "spiral": true
   },
   {
     "id": "q63",
@@ -1005,7 +1308,12 @@
     "correctIndex": 1,
     "explanation": "Memory tiering is a compute capability: the hypervisor tiers hot pages to DRAM and cold pages to local NVMe, increasing effective memory without additional DRAM. In 9.1 it needs no host reboot to enable, supports all virtual machine types, and can mirror the tiering device with software RAID-1.",
     "relatedDD": null,
-    "vcf91Note": "Broadcom cites up to 40 percent lower server cost for clusters running a mix of AI and non-AI workloads."
+    "vcf91Note": "Broadcom cites up to 40 percent lower server cost for clusters running a mix of AI and non-AI workloads.",
+    "terms": [
+      "vSAN",
+      "RAID"
+    ],
+    "spiral": true
   },
   {
     "id": "q64",
@@ -1021,7 +1329,12 @@
     "correctIndex": 1,
     "explanation": "The taxonomy is VCF private cloud, then VCF fleet, then VCF instance, then VCF domain, then vSphere cluster. The private cloud is the highest management and consumption boundary; clusters are where ESX capacity lives.",
     "relatedDD": "DD-602",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vSphere",
+      "cluster"
+    ],
+    "spiral": true
   },
   {
     "id": "q65",
@@ -1037,7 +1350,14 @@
     "correctIndex": 1,
     "explanation": "A fleet is the scope of one VCF Operations instance and one VCF Automation instance, and can contain multiple VCF instances plus standalone vCenter instances. Those fleet components run in the management domain of the first instance.",
     "relatedDD": "DD-602",
-    "vcf91Note": "VCF 9.1 raises the supported scale to 5000 ESX hosts per instance, so fleet boundaries can be set on operational rather than scale grounds."
+    "vcf91Note": "VCF 9.1 raises the supported scale to 5000 ESX hosts per instance, so fleet boundaries can be set on operational rather than scale grounds.",
+    "terms": [
+      "NSX",
+      "management domain",
+      "vCenter",
+      "NSX Manager"
+    ],
+    "spiral": true
   },
   {
     "id": "q66",
@@ -1053,7 +1373,13 @@
     "correctIndex": 1,
     "explanation": "Every instance has its own SDDC Manager, management vCenter and management NSX, which keeps infrastructure change bounded to a single deployment. VCF Operations, VCF Automation and the fleet-level management services are shared across the fleet.",
     "relatedDD": "DD-602",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "NSX",
+      "SDDC Manager",
+      "vCenter"
+    ],
+    "spiral": true
   },
   {
     "id": "q67",
@@ -1069,7 +1395,13 @@
     "correctIndex": 1,
     "explanation": "The high availability model deploys a primary node, a replica node and a data node, providing data redundancy and rapid recovery from a single node failure, with scale-out available by adding further data nodes.",
     "relatedDD": "DD-603",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "cluster",
+      "availability",
+      "witness"
+    ],
+    "spiral": true
   },
   {
     "id": "q68",
@@ -1085,7 +1417,11 @@
     "correctIndex": 1,
     "explanation": "Sizes from XS to XL are chosen against the known or forecast virtual machine and object count across all connected instances, to stay within the monitoring scale limits. A separate-virtual-machines anti-affinity rule must also be created after deployment.",
     "relatedDD": "DD-603",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "cluster"
+    ],
+    "spiral": true
   },
   {
     "id": "q69",
@@ -1101,7 +1437,11 @@
     "correctIndex": 1,
     "explanation": "The identity broker is the federated authentication component, the successor to Workspace ONE Access in the VCF lineage. Certificates are handled by VMCA or an external certificate authority, and licensing by the licence server.",
     "relatedDD": "DD-607",
-    "vcf91Note": "In VCF 9.1 the identity broker becomes a component hosted on the shared VCF services runtime, deployed automatically in the first management domain during install or upgrade."
+    "vcf91Note": "In VCF 9.1 the identity broker becomes a component hosted on the shared VCF services runtime, deployed automatically in the first management domain during install or upgrade.",
+    "terms": [
+      "vCenter"
+    ],
+    "spiral": true
   },
   {
     "id": "q70",
@@ -1117,7 +1457,11 @@
     "correctIndex": 2,
     "explanation": "Broadcom's guidance is that a maximum of five VCF instances can connect to one appliance-mode identity broker. Embedded mode is recommended as one broker per instance because it depends on that instance's management vCenter.",
     "relatedDD": "DD-607",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vCenter"
+    ],
+    "spiral": true
   },
   {
     "id": "q71",
@@ -1133,7 +1477,12 @@
     "correctIndex": 0,
     "explanation": "The VMware Certificate Authority is embedded in vCenter and can act as a root or as a subordinate of an enterprise authority. As a self-contained root it sits outside enterprise certificate governance, which is why compliance-driven designs use an external authority.",
     "relatedDD": "DD-608",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "cluster",
+      "vCenter"
+    ],
+    "spiral": true
   },
   {
     "id": "q72",
@@ -1149,7 +1498,16 @@
     "correctIndex": 1,
     "explanation": "VCF Operations deploys the first workload domain's vCenter instance and NSX Manager instance into the management domain. Additional workload domains receive another vCenter and either share an existing NSX Manager cluster or get a new one.",
     "relatedDD": "DD-701",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "NSX",
+      "cluster",
+      "workload domain",
+      "management domain",
+      "vCenter",
+      "NSX Manager"
+    ],
+    "spiral": true
   },
   {
     "id": "q73",
@@ -1165,7 +1523,15 @@
     "correctIndex": 0,
     "explanation": "Sharing reduces appliance count and cost but means the domains share NSX lifecycle and the overlay transport zone, so the blast radius grows. Dedicating a cluster buys independence and isolation at the cost of extra footprint.",
     "relatedDD": "DD-701",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "NSX",
+      "cluster",
+      "overlay",
+      "availability",
+      "NSX Manager"
+    ],
+    "spiral": true
   },
   {
     "id": "q74",
@@ -1181,7 +1547,14 @@
     "correctIndex": 1,
     "explanation": "The NSX Container Plugin provisions these shared network resources for the namespace, and along with the Avi Kubernetes Operator supplies networking for pods and virtual machines, including subnet provisioning, IP address management and ClusterIP, LoadBalancer and Ingress service types.",
     "relatedDD": "DD-706",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "NSX",
+      "SDDC Manager",
+      "vSphere",
+      "VPC"
+    ],
+    "spiral": true
   },
   {
     "id": "q75",
@@ -1197,7 +1570,14 @@
     "correctIndex": 1,
     "explanation": "VPCs are region-scoped. This directly constrains network design: a namespace in another region cannot reuse the same VPC, so zone and region layout shapes VPC and address-space planning.",
     "relatedDD": "DD-706",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "NSX",
+      "vSphere",
+      "cluster",
+      "VPC"
+    ],
+    "spiral": true
   },
   {
     "id": "q76",
@@ -1213,7 +1593,12 @@
     "correctIndex": 0,
     "explanation": "VM-VM rules specify affinity or anti-affinity between individual virtual machines. VM-Host rules relate a group of virtual machines to a group of hosts and support must or should strength with run-on or not-run-on polarity. Both are cluster-scoped.",
     "relatedDD": "DD-708",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "cluster",
+      "host affinity"
+    ],
+    "spiral": true
   },
   {
     "id": "q77",
@@ -1245,7 +1630,12 @@
     "correctIndex": 1,
     "explanation": "Anti-affinity keeps each named virtual machine on a different host, so the cluster must have at least as many usable hosts as rule members. Designing rules the cluster cannot satisfy is a common error that leaves the rule permanently violated.",
     "relatedDD": "DD-708",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vSphere",
+      "cluster"
+    ],
+    "spiral": true
   },
   {
     "id": "q79",
@@ -1261,7 +1651,12 @@
     "correctIndex": 1,
     "explanation": "Manageability includes the operational burden, the tooling required and the skills the team must have. A design that a two-person operations team cannot run has a manageability problem regardless of how available it is.",
     "relatedDD": null,
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "AMPRS",
+      "availability"
+    ],
+    "spiral": true
   },
   {
     "id": "q80",
@@ -1277,7 +1672,14 @@
     "correctIndex": 1,
     "explanation": "RPO looks backwards and defines acceptable data loss; RTO looks forwards and defines acceptable time to restore. An RPO of zero requires synchronous replication, which brings the stretched cluster latency constraint with it.",
     "relatedDD": "DD-801",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "cluster",
+      "RTO",
+      "RPO",
+      "stretched cluster"
+    ],
+    "spiral": true
   },
   {
     "id": "q81",
@@ -1293,7 +1695,14 @@
     "correctIndex": 1,
     "explanation": "Latency between data sites must not exceed 5 ms round trip, or 2.5 ms one way, because writes are acknowledged synchronously across both sites. The 200 ms figure applies to the witness site, which carries only metadata.",
     "relatedDD": "DD-801",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vSAN",
+      "cluster",
+      "witness",
+      "stretched cluster"
+    ],
+    "spiral": true
   },
   {
     "id": "q82",
@@ -1309,7 +1718,15 @@
     "correctIndex": 0,
     "explanation": "25 ms round trip is five times the supported limit, so synchronous cross-site writes are not viable. Site protection must come from asynchronous replication and backup instead. The 200 ms figure applies only to the witness.",
     "relatedDD": "DD-801",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vSAN",
+      "cluster",
+      "RAID",
+      "witness",
+      "stretched cluster"
+    ],
+    "spiral": true
   },
   {
     "id": "q83",
@@ -1325,7 +1742,12 @@
     "correctIndex": 3,
     "explanation": "The witness tolerates up to 200 ms round trip, or 100 ms one way, because it stores only small amounts of metadata and is not in the vSAN data path. Around 100 Mbps of bandwidth is sufficient for most deployments.",
     "relatedDD": "DD-801",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vSAN",
+      "witness"
+    ],
+    "spiral": true
   },
   {
     "id": "q84",
@@ -1341,7 +1763,14 @@
     "correctIndex": 2,
     "explanation": "The witness breaks quorum during a partition or site failure, which it can only do if it does not share fate with either data site. It must never run inside the cluster it arbitrates, and multiple stretched clusters each need their own witness appliance.",
     "relatedDD": "DD-801",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vSAN",
+      "cluster",
+      "witness",
+      "stretched cluster"
+    ],
+    "spiral": true
   },
   {
     "id": "q85",
@@ -1357,7 +1786,15 @@
     "correctIndex": 0,
     "explanation": "Site disaster tolerance is delivered by keeping a full copy of data at each site, which is a mirror. Erasure coding is still used within each site for host-level resilience. Stretched-cluster site resilience and two-node host resilience are the only cases where mirroring remains mandatory.",
     "relatedDD": "DD-801",
-    "vcf91Note": "VCF 9.1 Auto-RAID reflects this explicitly: it never selects RAID-1 except for stretched-cluster site resilience and two-node host resilience."
+    "vcf91Note": "VCF 9.1 Auto-RAID reflects this explicitly: it never selects RAID-1 except for stretched-cluster site resilience and two-node host resilience.",
+    "terms": [
+      "vSAN",
+      "cluster",
+      "ESA",
+      "RAID",
+      "stretched cluster"
+    ],
+    "spiral": true
   },
   {
     "id": "q86",
@@ -1389,7 +1826,12 @@
     "correctIndex": 1,
     "explanation": "An AMPRS statement listing only benefits is incomplete. Improving one dimension almost always costs another, and recording the degradation is what makes the trade-off reviewable against the customer's stated priorities.",
     "relatedDD": "DD-603",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "AMPRS",
+      "availability"
+    ],
+    "spiral": true
   },
   {
     "id": "q88",
@@ -1405,7 +1847,16 @@
     "correctIndex": 1,
     "explanation": "In VCF the operation is API-driven: you validate the cluster stretch specification and then submit it with a PATCH to the clusters API. The specification includes the witness details, and a vSAN storage cluster must be stretched before any of its compute client clusters.",
     "relatedDD": "DD-801",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vSAN",
+      "SDDC Manager",
+      "vSphere",
+      "cluster",
+      "availability",
+      "witness"
+    ],
+    "spiral": true
   },
   {
     "id": "q89",
@@ -1421,7 +1872,13 @@
     "correctIndex": 0,
     "explanation": "The Supervisor embeds a platform-level Kubernetes control plane into ESX hosts, exposing a unified declarative API for virtual machines, vSphere pods, VKS clusters, image registries and data services. VKS clusters are guest clusters that run on top of it.",
     "relatedDD": "DD-905",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vSphere",
+      "cluster",
+      "vCenter"
+    ],
+    "spiral": true
   },
   {
     "id": "q90",
@@ -1437,7 +1894,12 @@
     "correctIndex": 1,
     "explanation": "A namespace is an envelope of resources that simultaneously bounds quota, network assignment, storage class access and identity grants. That combination is what makes it a genuine trust boundary rather than an organisational convenience.",
     "relatedDD": "DD-903",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vSphere",
+      "vCenter"
+    ],
+    "spiral": true
   },
   {
     "id": "q91",
@@ -1453,7 +1915,11 @@
     "correctIndex": 1,
     "explanation": "An organization contains projects, a project contains one or more vSphere namespaces, and workloads such as virtual machines and VKS clusters are provisioned inside a namespace. Namespaces are bound to the scope of their project.",
     "relatedDD": "DD-903",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vSphere"
+    ],
+    "spiral": true
   },
   {
     "id": "q92",
@@ -1501,7 +1967,11 @@
     "correctIndex": 0,
     "explanation": "vSphere Kubernetes Service provisions conformant Kubernetes guest clusters inside a namespace's quota and network, with the Supervisor acting as API control plane and reconciling desired state, so a failed worker node is replaced automatically.",
     "relatedDD": "DD-905",
-    "vcf91Note": "VCF 9.1 supports up to 500 Kubernetes clusters per Supervisor and uses linked clones for Fast Deploy provisioning."
+    "vcf91Note": "VCF 9.1 supports up to 500 Kubernetes clusters per Supervisor and uses linked clones for Fast Deploy provisioning.",
+    "terms": [
+      "vSphere"
+    ],
+    "spiral": true
   },
   {
     "id": "q95",
@@ -1517,7 +1987,14 @@
     "correctIndex": 2,
     "explanation": "VDS-backed and NSX classic stacks are supported for Supervisor, but the combination of a vSphere namespace and an NSX VPC is what delivers the multi-tenancy model that All Apps organizations require.",
     "relatedDD": "DD-706",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "NSX",
+      "VDS",
+      "vSphere",
+      "VPC"
+    ],
+    "spiral": true
   },
   {
     "id": "q96",
@@ -1533,7 +2010,11 @@
     "correctIndex": 1,
     "explanation": "The provider assigns Supervisors or zones with limits and reservations, selects which VM classes and storage classes the organization may use, and subdivides quota into namespaces. Self-service does not mean ungoverned; these are the control points.",
     "relatedDD": "DD-904",
-    "vcf91Note": "VCF 9.1 adds infrastructure policies that delegate control of services such as vDefend firewall and Avi load balancing to organizations within provider-defined guardrails."
+    "vcf91Note": "VCF 9.1 adds infrastructure policies that delegate control of services such as vDefend firewall and Avi load balancing to organizations within provider-defined guardrails.",
+    "terms": [
+      "vCenter"
+    ],
+    "spiral": true
   },
   {
     "id": "q97",
@@ -1597,7 +2078,11 @@
     "correctIndex": 1,
     "explanation": "Super metrics measure things the platform does not natively collect, such as ratios, rollups across a cluster or business-relevant composites. They can serve as the metric source for a symptom, which is how a custom objective becomes alertable.",
     "relatedDD": "DD-1003",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "cluster"
+    ],
+    "spiral": true
   },
   {
     "id": "q101",
@@ -1693,7 +2178,12 @@
     "correctIndex": 0,
     "explanation": "HCX pairs source and destination sites, deploys a service mesh with interconnect appliances, and provides several migration technologies. It can also migrate between clusters within a single vCenter.",
     "relatedDD": "DD-1101",
-    "vcf91Note": "VCF 9.1 introduces no significant changes to HCX migration methods."
+    "vcf91Note": "VCF 9.1 introduces no significant changes to HCX migration methods.",
+    "terms": [
+      "overlay",
+      "vCenter"
+    ],
+    "spiral": true
   },
   {
     "id": "q107",
@@ -1709,7 +2199,12 @@
     "correctIndex": 2,
     "explanation": "Cold migration uses the Network File Copy protocol and is selected automatically when the source virtual machine is powered off. Bulk migration uses vSphere Replication, and vMotion and RAV use the vMotion protocol for the state transfer.",
     "relatedDD": "DD-1101",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vMotion",
+      "vSphere"
+    ],
+    "spiral": true
   },
   {
     "id": "q108",
@@ -1741,7 +2236,11 @@
     "correctIndex": 1,
     "explanation": "vMotion delivers zero service interruption by transferring live memory and execution state, but it moves one virtual machine at a time. RAV exists precisely to combine that zero-downtime switchover with parallel replication for scale.",
     "relatedDD": "DD-1101",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vMotion"
+    ],
+    "spiral": true
   },
   {
     "id": "q110",
@@ -1757,7 +2256,11 @@
     "correctIndex": 1,
     "explanation": "RAV takes bulk migration's parallel operations, resiliency and scheduling, and vMotion's zero-downtime state transfer. Because only deltas plus memory contents move at switchover, the cutover window is short even for a large batch.",
     "relatedDD": "DD-1101",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vMotion"
+    ],
+    "spiral": true
   },
   {
     "id": "q111",
@@ -1773,7 +2276,11 @@
     "correctIndex": 1,
     "explanation": "RAV requires the HCX Enterprise edition, as does OS Assisted Migration. Recommending RAV as the primary method therefore carries a licensing dependency that must be recorded in the design.",
     "relatedDD": "DD-1101",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vMotion"
+    ],
+    "spiral": true
   },
   {
     "id": "q112",
@@ -1805,7 +2312,12 @@
     "correctIndex": 2,
     "explanation": "OS Assisted Migration handles bulk migration of guest, non-vSphere virtual machines into vSphere, and involves conversion downtime. Like RAV, it requires the HCX Enterprise licence tier.",
     "relatedDD": "DD-1101",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vMotion",
+      "vSphere"
+    ],
+    "spiral": true
   },
   {
     "id": "q114",
@@ -1821,7 +2333,11 @@
     "correctIndex": 1,
     "explanation": "Replication duration is a function of size, change rate and bandwidth, and the switchover additionally needs enough bandwidth to complete the final synchronisation. Sizing waves on virtual machine count alone is a common planning error.",
     "relatedDD": "DD-1101",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "cluster"
+    ],
+    "spiral": true
   },
   {
     "id": "q115",
@@ -1853,7 +2369,11 @@
     "correctIndex": 0,
     "explanation": "Rollback depends on the source remaining available, which is why decommissioning or repurposing source hardware before acceptance destroys the fallback. Bulk migration also retains the original virtual machine in a Migrated VMs folder for recovery.",
     "relatedDD": "DD-1101",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "FTT"
+    ],
+    "spiral": true
   },
   {
     "id": "q117",
@@ -1869,7 +2389,16 @@
     "correctIndex": 1,
     "explanation": "Overlay readiness is a path property, not a single object setting. VDS jumbo with a 1500 hop in the underlay yields working small pings and broken Geneve/vSAN under load.",
     "relatedDD": "DD-402",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "vMotion",
+      "Geneve",
+      "NSX",
+      "vSAN",
+      "VDS",
+      "Edge"
+    ],
+    "spiral": true
   },
   {
     "id": "q118",
@@ -1885,7 +2414,16 @@
     "correctIndex": 1,
     "explanation": "C02 says reuse the fabric shape; validation is still mandatory. Near-saturated 10 Gb links fail the headroom test for burst, failover, storage and growth — preference for 25 Gb+ on new hardware follows from that evidence.",
     "relatedDD": "DD-402",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "overlay",
+      "underlay",
+      "MTU",
+      "L3",
+      "spine",
+      "leaf"
+    ],
+    "spiral": true
   },
   {
     "id": "q119",
@@ -1901,6 +2439,209 @@
     "correctIndex": 1,
     "explanation": "Configured MTU on one device does not prove the path. Cross-rack DF pings fail at the hop that still uses 1500 — often the spine/router — which is exactly where overlay traffic breaks.",
     "relatedDD": "DD-402",
-    "vcf91Note": null
+    "vcf91Note": null,
+    "terms": [
+      "Geneve",
+      "overlay",
+      "MTU",
+      "spine"
+    ],
+    "spiral": true
+  },
+  {
+    "id": "q-ms-rcar",
+    "module": "mod3",
+    "type": "scenario",
+    "multiSelect": true,
+    "selectCount": 2,
+    "stem": "Rainpole states the platform must go live in 30 days, but an internal change window takes 90 days, and the existing L3 fabric cannot be redesigned. Select TWO RCAR classifications that correctly describe these statements.",
+    "options": [
+      "30-day go-live is a requirement (or business constraint on delivery)",
+      "90-day change window is a constraint on how the requirement can be met",
+      "L3 fabric limitation is an assumption you may invent without evidence",
+      "Both timelines are functional requirements for NSX Edge sizing"
+    ],
+    "answers": [
+      0,
+      1
+    ],
+    "explanation": "Delivery timelines and irreversible platform limits are classified under RCAR as requirements/constraints. Do not invent assumptions; do not mislabel constraints as product FRs.",
+    "terms": [
+      "RCAR",
+      "constraint",
+      "requirement"
+    ]
+  },
+  {
+    "id": "q-ms-amprs",
+    "module": "mod8",
+    "type": "scenario",
+    "multiSelect": true,
+    "selectCount": 2,
+    "stem": "Which TWO AMPRS quality attributes must be explicitly defended when Rainpole requires measurable RTO/RPO and continuous operations across failure domains?",
+    "options": [
+      "Availability",
+      "Recoverability",
+      "Preferred hardware vendor branding",
+      "Unvalidated growth forecast treated as a hard FR"
+    ],
+    "answers": [
+      0,
+      1
+    ],
+    "explanation": "RTO/RPO and continuous operations map to Availability and Recoverability in AMPRS. Vendor preference and unvalidated forecasts are not quality attributes.",
+    "terms": [
+      "AMPRS",
+      "RTO",
+      "RPO",
+      "Availability",
+      "Recoverability"
+    ]
+  },
+  {
+    "id": "q-ms-nsx",
+    "module": "mod4",
+    "type": "scenario",
+    "multiSelect": true,
+    "selectCount": 2,
+    "stem": "For a VCF networking design on the course baseline, select TWO statements an architect should treat as correct.",
+    "options": [
+      "NSX prepares on VDS 8.0+ (no N-VDS in VCF 9)",
+      "Transport node profiles prepare hosts at cluster scope",
+      "Skipping MTU proof is fine if small pings succeed",
+      "Overlay design can ignore underlay independence"
+    ],
+    "answers": [
+      0,
+      1
+    ],
+    "explanation": "VCF 9 uses VDS-backed NSX preparation; TNPs are cluster-scoped. MTU and underlay proof remain required design hygiene.",
+    "terms": [
+      "NSX",
+      "VDS",
+      "transport node",
+      "MTU"
+    ]
+  },
+  {
+    "id": "q-ms-storage",
+    "module": "mod5",
+    "type": "scenario",
+    "multiSelect": true,
+    "selectCount": 2,
+    "stem": "When evaluating vSAN for Rainpole failure tolerance, select TWO design truths an architect must keep aligned.",
+    "options": [
+      "FTT and failure domain choices must match stated availability/recoverability intent",
+      "Witness and stretched-cluster decisions must follow site topology constraints",
+      "Retaining end-of-life storage solely because it is paid for is a sound AMPRS defense",
+      "Storage decisions need no conceptual-model parent"
+    ],
+    "answers": [
+      0,
+      1
+    ],
+    "explanation": "FTT/domains and stretched/witness choices are constrained by topology and quality intent. Paid-for EOL gear and orphan decisions fail architect method.",
+    "terms": [
+      "vSAN",
+      "FTT",
+      "witness",
+      "stretched cluster"
+    ]
+  },
+  {
+    "id": "q-ms-domains",
+    "module": "mod6",
+    "type": "scenario",
+    "multiSelect": true,
+    "selectCount": 2,
+    "stem": "Select TWO correct distinctions between the management domain and a workload domain in VCF design conversations.",
+    "options": [
+      "Management domain hosts the VCF management stack lifecycle",
+      "Workload domains host customer/application capacity under the design",
+      "Workload domains replace SDDC Manager entirely",
+      "Management and workload domains are interchangeable labels with no design impact"
+    ],
+    "answers": [
+      0,
+      1
+    ],
+    "explanation": "Architect language separates management plane lifecycle from workload capacity. They are not interchangeable and SDDC Manager remains central.",
+    "terms": [
+      "management domain",
+      "workload domain",
+      "SDDC Manager"
+    ]
+  },
+  {
+    "id": "q-ms-trace",
+    "module": "mod3",
+    "type": "scenario",
+    "multiSelect": true,
+    "selectCount": 2,
+    "stem": "A design decision is challenged in review. Select TWO elements that must be present for VMware-style traceability.",
+    "options": [
+      "Cited requirement/constraint IDs that the decision satisfies",
+      "Rejected alternative with a reason tied to AMPRS or constraints",
+      "A preferred product letter with no conceptual parent",
+      "Memorized exam letter without a decision rule"
+    ],
+    "answers": [
+      0,
+      1
+    ],
+    "explanation": "Traceability links decisions to evidence and shows why alternatives were rejected. Letter memorization is not architect method.",
+    "terms": [
+      "traceability",
+      "AMPRS",
+      "design decision"
+    ]
+  },
+  {
+    "id": "q-ms-91",
+    "module": "mod3",
+    "type": "scenario",
+    "multiSelect": true,
+    "selectCount": 2,
+    "stem": "Select TWO correct ways to treat 9.1 Delta material while scoring Rainpole / course-baseline practice.",
+    "options": [
+      "Treat Delta as informational awareness unless the stem asks “as of 9.1”",
+      "Do not mark a valid course-baseline answer wrong solely because 9.1 later changed something",
+      "Replace every baseline answer with the newest 9.1 option automatically",
+      "Ignore Broadcom docs and invent Rainpole BRs to match 9.1 marketing"
+    ],
+    "answers": [
+      0,
+      1
+    ],
+    "explanation": "9.1 is informational in this trainer. Baseline answers remain valid unless the question explicitly scopes to 9.1.",
+    "terms": [
+      "9.1 Delta"
+    ],
+    "informational91": true,
+    "note91": "Informational policy check — not a 9.1 feature trivia item."
+  },
+  {
+    "id": "q-ms-consume",
+    "module": "mod9",
+    "type": "scenario",
+    "multiSelect": true,
+    "selectCount": 2,
+    "stem": "Rainpole wants developer self-service without breaking governance. Select TWO architect-correct consumption design moves.",
+    "options": [
+      "Map consumption controls to stated governance/security requirements",
+      "Keep automation outcomes traceable to conceptual/logical decisions",
+      "Expose unrestricted admin APIs because speed always beats policy",
+      "Skip Day-2 operability because consumption is Day-0 only"
+    ],
+    "answers": [
+      0,
+      1
+    ],
+    "explanation": "Consumption must satisfy governance and remain traceable. Speed-without-policy and ignoring Day-2 break architect method.",
+    "terms": [
+      "Consumption",
+      "governance",
+      "traceability"
+    ]
   }
 ]

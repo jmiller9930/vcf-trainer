@@ -141,6 +141,8 @@ window.DataLoader = (function () {
       number: raw.number != null ? raw.number : moduleNumberFromId(id, i + 1),
       title: str(raw.title || raw.name) || `Module ${i + 1}`,
       summary: str(raw.summary || raw.description),
+      rainpoleJob: str(raw.rainpoleJob || raw.labJob || raw.rfsJob),
+      requirementsSpine: str(raw.requirementsSpine || raw.reqSpine),
       exam: str(raw.exam || raw.examSection),
       delta91: !!(raw.delta91 || raw.is91),
       components: arr(raw.components).map((c, ci) => normaliseComponent(c || {}, id, ci)),
@@ -184,14 +186,37 @@ window.DataLoader = (function () {
             }
             answer = Number(answer);
             if (!Number.isInteger(answer) || answer < 0 || answer >= options.length) answer = 0;
-            knowledgeCheck = {
+    knowledgeCheck = {
               stem: str(kc.stem || kc.question || kc.text),
               options,
               answer,
+              answers: (() => {
+                const multi = arr(kc.answers || kc.correctIndexes || kc.correctIndices)
+                  .map(v => {
+                    if (typeof v === 'string' && /^[A-Za-z]$/.test(v.trim())) {
+                      return v.trim().toUpperCase().charCodeAt(0) - 65;
+                    }
+                    return Number(v);
+                  })
+                  .filter(n => Number.isInteger(n) && n >= 0 && n < options.length);
+                if (multi.length) return [...new Set(multi)].sort((a, b) => a - b);
+                return [answer];
+              })(),
+              multiSelect: !!(kc.multiSelect || kc.multi || (arr(kc.answers || kc.correctIndexes).length > 1)),
+              selectCount: Number(kc.selectCount || kc.select || 0) || 0,
               explanation: str(kc.explanation || kc.rationale),
               reinforce: str(kc.reinforce || kc.remediation || kc.studyClip),
-              sourceQuestionId: str(kc.sourceQuestionId || kc.questionId || '')
+              sourceQuestionId: str(kc.sourceQuestionId || kc.questionId || ''),
+              terms: arr(kc.terms || kc.term).map(str).filter(Boolean),
+              spiral: kc.spiral !== false,
+              informational91: !!(kc.informational91 || kc.delta91Informational)
             };
+            if (knowledgeCheck.multiSelect && knowledgeCheck.answers.length < 2) {
+              knowledgeCheck.multiSelect = false;
+            }
+            if (!knowledgeCheck.selectCount && knowledgeCheck.multiSelect) {
+              knowledgeCheck.selectCount = knowledgeCheck.answers.length;
+            }
             if (!knowledgeCheck.stem || options.length < 2) knowledgeCheck = null;
           }
           return {
@@ -200,6 +225,10 @@ window.DataLoader = (function () {
             body: str(s.body || s.text || s.content),
             highlightIds: arr(s.highlightIds || s.highlights || s.callbacks).map(str).filter(Boolean),
             figureId: str(s.figureId || s.figure || ''),
+            rainpoleEvidence: str(s.rainpoleEvidence || s.rfsEvidence || s.keyDetail),
+            gapNote: str(s.gapNote || s.notStated),
+            informational91: !!(s.informational91 || s.delta91Informational),
+            note91: str(s.note91 || s.delta91Note),
             knowledgeCheck
           };
         }).filter(s => s.body || s.title || s.figureId);
@@ -260,7 +289,17 @@ window.DataLoader = (function () {
       typeof o === 'string' ? o.trim() : str(o.text || o.label)
     );
 
-    /* Answers may be an index, a letter, or the literal option text. */
+    /* Answers may be an index, a letter, literal option text, or multi-select indexes. */
+    let answers = arr(raw.answers || raw.correctIndexes || raw.correctIndices).map(v => {
+      if (typeof v === 'string') {
+        const trimmed = v.trim();
+        if (/^[A-Za-z]$/.test(trimmed)) return trimmed.toUpperCase().charCodeAt(0) - 65;
+        const found = options.findIndex(o => o === trimmed);
+        return found >= 0 ? found : Number(trimmed);
+      }
+      return Number(v);
+    }).filter(n => Number.isInteger(n) && n >= 0 && n < options.length);
+
     let answer = raw.correctIndex != null ? raw.correctIndex
       : raw.answer != null ? raw.answer
       : raw.correct != null ? raw.correct
@@ -274,19 +313,84 @@ window.DataLoader = (function () {
       }
     }
     answer = Number(answer);
-    if (!Number.isInteger(answer) || answer < 0 || answer >= options.length) answer = 0;
+    if (!Number.isInteger(answer) || answer < 0 || answer >= options.length) {
+      answer = answers.length ? answers[0] : 0;
+    }
+    if (!answers.length) answers = [answer];
+    answers = [...new Set(answers)].sort((a, b) => a - b);
 
+    const multiSelect = !!(raw.multiSelect || raw.multi || answers.length > 1);
+    const selectCount = Number(raw.selectCount || raw.select || 0) || (multiSelect ? answers.length : 0);
+
+    const stem = str(raw.stem || raw.question || raw.text);
+    const terms = arr(raw.terms || raw.term).map(str).filter(Boolean);
     return {
       id: str(raw.id) || `q${i + 1}`,
       moduleId: str(raw.moduleId || raw.module || raw.modId),
       type: str(raw.type || raw.category) || 'knowledge',
       difficulty: str(raw.difficulty) || 'medium',
-      stem: str(raw.stem || raw.question || raw.text),
+      stem,
       options,
-      answer,
+      answer: answers[0],
+      answers,
+      multiSelect: multiSelect && answers.length > 1,
+      selectCount: multiSelect && answers.length > 1 ? selectCount : 0,
       explanation: str(raw.explanation || raw.rationale),
-      delta91: !!(raw.delta91 || raw.is91)
+      terms,
+      spiral: raw.spiral !== false,
+      delta91: !!(raw.delta91 || raw.is91),
+      informational91: !!(raw.informational91 || raw.delta91Informational || raw.delta91 || raw.is91),
+      note91: str(raw.note91 || raw.delta91Note || ((raw.delta91 || raw.is91)
+        ? '9.1 update — informational. A valid course-baseline (9.0-era / Rainpole lab) answer is not wrong solely because 9.1 later changed something, unless the question explicitly asks “as of 9.1”.'
+        : ''))
     };
+  }
+
+  /* Spiral bank: earlier Course checks resurfaced later (term → module order). */
+  function getModuleOrder(modId) {
+    const idx = cache.modules.findIndex(m => m.id === modId);
+    return idx >= 0 ? idx : 999;
+  }
+
+  function getSpiralBank() {
+    const bank = [];
+    cache.modules.forEach((mod, mi) => {
+      ((mod.course && mod.course.sections) || []).forEach(s => {
+        const kc = s.knowledgeCheck;
+        if (!kc || !kc.terms || !kc.terms.length) return;
+        if (kc.informational91) return;
+        bank.push({
+          id: `spiral:${s.id}`,
+          sourceSectionId: s.id,
+          moduleId: mod.id,
+          moduleOrder: mi,
+          terms: kc.terms.slice(),
+          stem: kc.stem,
+          options: kc.options.slice(),
+          answer: kc.answer,
+          explanation: kc.explanation || `Recall from earlier Course: ${kc.terms.join(', ')}.`,
+          reinforce: kc.reinforce || 'Re-open the earlier Course section that introduced this term.'
+        });
+      });
+    });
+    return bank;
+  }
+
+  /* Prefer a prior term that appears in the current section body; else first earlier. */
+  function pickSpiralRecall(moduleId, section) {
+    if (!section) return null;
+    const order = getModuleOrder(moduleId);
+    if (order <= 0) return null;
+    const hay = `${section.title || ''} ${section.body || ''} ${section.rainpoleEvidence || ''}`.toLowerCase();
+    const bank = getSpiralBank().filter(b => b.moduleOrder < order && b.sourceSectionId !== section.id);
+    if (!bank.length) return null;
+    const mentioned = bank.filter(b => b.terms.some(t => t && hay.includes(String(t).toLowerCase())));
+    const pool = mentioned.length ? mentioned : bank;
+    let h = 0;
+    const key = `${moduleId}:${section.id}`;
+    for (let i = 0; i < key.length; i++) h = ((h << 5) - h + key.charCodeAt(i)) | 0;
+    const pick = pool[Math.abs(h) % pool.length];
+    return pick ? Object.assign({}, pick, { id: `${section.id}::spiral` }) : null;
   }
 
   function normaliseDeltaItem(raw, i) {
@@ -296,6 +400,7 @@ window.DataLoader = (function () {
       title: str(raw.title || raw.name) || `Change ${i + 1}`,
       description: str(raw.description || raw.summary),
       detail: str(raw.detail || raw.details || raw.notes),
+      informational: true,
       modules: arr(raw.modules || raw.affectedModules || raw.moduleIds).map(str).filter(Boolean)
     };
   }
@@ -423,6 +528,9 @@ window.DataLoader = (function () {
     getFigure,
     getQuestionsByModule,
     getQuestionsByType,
+    getSpiralBank,
+    pickSpiralRecall,
+    getModuleOrder,
     getErrors
   };
 })();

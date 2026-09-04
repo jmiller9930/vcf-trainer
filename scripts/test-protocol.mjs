@@ -70,20 +70,34 @@ function mainStaticChecks() {
     }
   }
 
+  ok('HowTo continue/skip actions', fs.readFileSync(path.join(root, 'js/app.js'), 'utf8').includes('howto-continue') && fs.readFileSync(path.join(root, 'js/app.js'), 'utf8').includes('HOWTO_SEEN_KEY'));
+  ok('Rainpole callout renderer', fs.readFileSync(path.join(root, 'js/app.js'), 'utf8').includes('renderRainpoleCallouts'));
+  ok('Home CTA uses HowTo when unseen', fs.readFileSync(path.join(root, 'js/app.js'), 'utf8').includes("seen ? '#study' : '#howto'"));
+
   const modulesRaw = readJson('data/modules.json');
   const modules = Array.isArray(modulesRaw) ? modulesRaw : modulesRaw.modules;
   ok('modules loaded', modules.length === 9, `count=${modules.length}`);
+  ok('all modules have rainpoleJob', modules.every(m => m.rainpoleJob), 'missing jobs');
+  ok('mod3 has requirementsSpine', !!(modules.find(m => m.id === 'mod3') || {}).requirementsSpine);
 
   const figIds = new Set(figures.map(f => f.id));
   let figSections = 0;
   let broken = 0;
+  let sectionTotal = 0;
+  let sectionTested = 0;
+  let bare = [];
   for (const m of modules) {
     for (const s of (m.course && m.course.sections) || []) {
+      sectionTotal += 1;
       if (s.figureId) {
         figSections += 1;
         if (!figIds.has(s.figureId)) broken += 1;
       }
+      const fig = figures.find(f => f.id === s.figureId);
+      const hasFig = !!(fig && fig.checks && fig.checks.length);
       const kc = s.knowledgeCheck;
+      if (hasFig || kc) sectionTested += 1;
+      else bare.push(s.id);
       if (kc) {
         const valid = kc.options && kc.options.length >= 2 && Number.isInteger(kc.answer) && kc.answer >= 0 && kc.answer < kc.options.length;
         ok(`text check ${s.id}`, valid, valid ? '' : `bad answer ${kc.answer}`);
@@ -91,6 +105,18 @@ function mainStaticChecks() {
     }
   }
   ok('course figure sections reference known figures', broken === 0, `sections=${figSections} broken=${broken}`);
+  ok('every Course section is tested', sectionTested === sectionTotal && bare.length === 0, `tested=${sectionTested}/${sectionTotal} bare=${bare.slice(0, 5).join(',')}`);
+
+  const appSrc = fs.readFileSync(path.join(root, 'js/app.js'), 'utf8');
+  ok('spiral recall wired', appSrc.includes('renderSpiralRecall') && appSrc.includes('course-spiral'));
+  ok('HowTo documents VMware MCQ formats', appSrc.includes('Single-best-answer MCQ') && appSrc.includes('Scenario / design-decision'));
+  ok('HowTo mentions every section tested', appSrc.includes('Every section tested'));
+
+  const dlSrc = fs.readFileSync(path.join(root, 'js/data-loader.js'), 'utf8');
+  ok('data-loader exposes pickSpiralRecall', dlSrc.includes('pickSpiralRecall'));
+
+  const quizSrc = fs.readFileSync(path.join(root, 'js/quiz-engine.js'), 'utf8');
+  ok('quiz spiral boost present', quizSrc.includes('spiralScore') && quizSrc.includes('introducedTerms'));
 
   const questions = readJson('data/questions.json');
   const qlist = Array.isArray(questions) ? questions : questions.questions;
@@ -98,13 +124,36 @@ function mainStaticChecks() {
   let badQ = 0;
   for (const q of qlist) {
     const opts = q.options || q.choices || [];
+    let ansList = Array.isArray(q.answers) ? q.answers : null;
     let ans = q.answer != null ? q.answer : q.correctIndex;
     if (typeof ans === 'string' && /^[A-Za-z]$/.test(ans)) ans = ans.toUpperCase().charCodeAt(0) - 65;
-    if (!(opts.length >= 2 && Number.isInteger(ans) && ans >= 0 && ans < opts.length)) badQ += 1;
+    if (ansList && ansList.length) {
+      if (!(opts.length >= 2 && ansList.every(a => Number.isInteger(a) && a >= 0 && a < opts.length))) badQ += 1;
+    } else if (!(opts.length >= 2 && Number.isInteger(ans) && ans >= 0 && ans < opts.length)) {
+      badQ += 1;
+    }
   }
   ok('questions have valid answers', badQ === 0, `bad=${badQ}`);
+  const multiQs = qlist.filter(q => q.multiSelect || (Array.isArray(q.answers) && q.answers.length > 1));
+  ok('multi-select bank present', multiQs.length >= 6, `count=${multiQs.length}`);
+  let badMulti = 0;
+  for (const q of multiQs) {
+    const opts = q.options || [];
+    const ans = q.answers || q.correctIndexes || [];
+    if (!(Array.isArray(ans) && ans.length >= 2 && ans.every(a => Number.isInteger(a) && a >= 0 && a < opts.length))) badMulti += 1;
+  }
+  ok('multi-select answers valid', badMulti === 0, `bad=${badMulti}`);
 
   ok('landing hero exists', exists('assets/landing-hero-cloud-automation.jpg'));
+  ok('HowTo locks VMware methods', fs.readFileSync(path.join(root, 'js/app.js'), 'utf8').includes('VMware Architect question methods only'));
+  ok('multi-select UI wired', fs.readFileSync(path.join(root, 'js/app.js'), 'utf8').includes('submitQuizMulti') && fs.readFileSync(path.join(root, 'js/app.js'), 'utf8').includes('quiz-submit-multi'));
+  ok('font size controls present', fs.readFileSync(path.join(root, 'index.html'), 'utf8').includes('fontIncrease') && fs.readFileSync(path.join(root, 'js/app.js'), 'utf8').includes('initFontScale'));
+  ok('listen / TTS wired', fs.readFileSync(path.join(root, 'js/ai-trainer.js'), 'utf8').includes('speakText') && fs.readFileSync(path.join(root, 'index.html'), 'utf8').includes('listenToggle'));
+  const aiSrc = fs.readFileSync(path.join(root, 'js/ai-trainer.js'), 'utf8');
+  ok('DeepSeek scripts + OpenAI TTS split', aiSrc.includes('speakLesson') && aiSrc.includes('transformForSpeech') && aiSrc.includes('Southern'));
+  ok('HowTo documents provider audio roles', fs.readFileSync(path.join(root, 'js/app.js'), 'utf8').includes('DeepSeek writes a short teacher script') && fs.readFileSync(path.join(root, 'js/app.js'), 'utf8').includes('Southern / Texas'));
+  ok('BYOK save keeps blank keys', aiSrc.includes('Leave blank to keep') || fs.readFileSync(path.join(root, 'js/app.js'), 'utf8').includes('Leave blank to keep saved key'));
+  ok('BYOK saveConfig preserves prior keys', aiSrc.includes('clearOpenAiKey') && aiSrc.includes('hasKey(prev.openai)'));
 }
 
 async function mainHttpChecks() {

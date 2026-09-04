@@ -9,6 +9,11 @@
 
   const THEME_KEY = 'vcf9.theme';
   const FILTER_KEY = 'vcf9.quizFilter';
+  const HOWTO_SEEN_KEY = 'vcf9.howtoSeen';
+  const FONT_KEY = 'vcf9.fontScale';
+  const FONT_MIN = 0.85;
+  const FONT_MAX = 1.4;
+  const FONT_STEP = 0.1;
 
   const EXAM_QUESTIONS = 40;
   const EXAM_MINUTES = 60;
@@ -19,12 +24,29 @@
   const scrim = document.getElementById('scrim');
   const navToggle = document.getElementById('navToggle');
   const themeToggle = document.getElementById('themeToggle');
+  const fontDecrease = document.getElementById('fontDecrease');
+  const fontIncrease = document.getElementById('fontIncrease');
+  const fontScaleLabel = document.getElementById('fontScaleLabel');
+  const listenToggle = document.getElementById('listenToggle');
 
   let quiz = null;   // { filter, question, answered, chosen, correct, asked }
   let exam = null;   // { phase, ids, answers, index, endsAt, timerId, startedAt, result }
-  let course = null; // { moduleId, index, cleared, figCleared, check, figCheck }
+  let course = null; // { moduleId, index, cleared, figCleared, spiralCleared, check, figCheck, spiralCheck }
   let aiChat = [];   // { role, text, meta }
   let aiBusy = false;
+
+  function isHowToSeen() {
+    try { return localStorage.getItem(HOWTO_SEEN_KEY) === '1'; } catch (err) { return false; }
+  }
+
+  function markHowToSeen() {
+    try { localStorage.setItem(HOWTO_SEEN_KEY, '1'); } catch (err) { /* storage disabled */ }
+  }
+
+  function continueFromHowTo() {
+    markHowToSeen();
+    location.hash = '#study';
+  }
 
   /* ====================================================================== */
   /* Helpers                                                                */
@@ -47,6 +69,40 @@
   function pct(n) { return `${Math.round(n || 0)}%`; }
 
   function letter(i) { return String.fromCharCode(65 + i); }
+
+  /* VMware Architect item helpers — single-best or exact-set multi-select. */
+  function isMultiItem(q) {
+    return !!(q && (q.multiSelect || (Array.isArray(q.answers) && q.answers.length > 1)));
+  }
+
+  function correctAnswers(q) {
+    if (!q) return [];
+    if (Array.isArray(q.answers) && q.answers.length) {
+      return [...new Set(q.answers.map(Number))].sort((a, b) => a - b);
+    }
+    return Number.isInteger(q.answer) ? [q.answer] : [];
+  }
+
+  function sameAnswerSet(chosen, expected) {
+    const a = Array.isArray(chosen) ? chosen.map(Number).filter(Number.isInteger) : [];
+    const b = Array.isArray(expected) ? expected.map(Number).filter(Number.isInteger) : [];
+    if (a.length !== b.length) return false;
+    const as = [...a].sort((x, y) => x - y);
+    const bs = [...b].sort((x, y) => x - y);
+    return as.every((v, i) => v === bs[i]);
+  }
+
+  function lettersOf(indexes) {
+    return (indexes || []).map(letter).join(', ');
+  }
+
+  function multiHint(q) {
+    if (!isMultiItem(q)) return '';
+    const n = q.selectCount || correctAnswers(q).length;
+    return n > 1
+      ? `Select ${n} that apply (exact set — no partial credit).`
+      : 'Select all that apply (exact set — no partial credit).';
+  }
 
   function formatClock(totalSeconds) {
     const s = Math.max(0, Math.round(totalSeconds));
@@ -151,6 +207,207 @@
   });
 
   /* ====================================================================== */
+  /* Font scale + Listen (AI TTS when OpenAI BYOK, else browser speech)      */
+  /* ====================================================================== */
+
+  function clampFont(n) {
+    const x = Math.round((Number(n) || 1) * 100) / 100;
+    return Math.min(FONT_MAX, Math.max(FONT_MIN, x));
+  }
+
+  function applyFontScale(scale) {
+    const next = clampFont(scale);
+    document.documentElement.style.setProperty('--text-scale', String(next));
+    if (fontScaleLabel) fontScaleLabel.textContent = `${Math.round(next * 100)}%`;
+    if (fontDecrease) fontDecrease.disabled = next <= FONT_MIN + 0.001;
+    if (fontIncrease) fontIncrease.disabled = next >= FONT_MAX - 0.001;
+    return next;
+  }
+
+  function initFontScale() {
+    let stored = null;
+    try { stored = localStorage.getItem(FONT_KEY); } catch (err) { /* storage disabled */ }
+    applyFontScale(stored ? Number(stored) : 1);
+  }
+
+  function bumpFont(delta) {
+    const cur = Number(getComputedStyle(document.documentElement).getPropertyValue('--text-scale')) || 1;
+    const next = applyFontScale(cur + delta);
+    try { localStorage.setItem(FONT_KEY, String(next)); } catch (err) { /* storage disabled */ }
+  }
+
+  if (fontDecrease) fontDecrease.addEventListener('click', () => bumpFont(-FONT_STEP));
+  if (fontIncrease) fontIncrease.addEventListener('click', () => bumpFont(FONT_STEP));
+
+  function setListenUi(playing) {
+    if (!listenToggle) return;
+    listenToggle.classList.toggle('is-playing', !!playing);
+    listenToggle.setAttribute('aria-pressed', playing ? 'true' : 'false');
+    listenToggle.setAttribute('aria-label', playing ? 'Stop listening' : 'Listen to this page');
+    listenToggle.title = playing ? 'Stop' : 'Listen to this page';
+    listenToggle.textContent = playing ? '■' : '▶';
+  }
+
+  function stopPageAudio() {
+    audioPlaylist = null;
+    if (window.AITrainer) AITrainer.stopSpeech();
+    setListenUi(false);
+    document.querySelectorAll('[data-action="section-listen"]').forEach(btn => {
+      btn.textContent = 'Listen to section';
+      btn.setAttribute('aria-pressed', 'false');
+    });
+    document.querySelectorAll('[data-action="module-listen"]').forEach(btn => {
+      btn.textContent = 'Play module';
+      btn.setAttribute('aria-pressed', 'false');
+    });
+  }
+
+  function pageListenText() {
+    const root = view.cloneNode(true);
+    root.querySelectorAll('button, .options, .kc-block, .course-nav, .navigator, .exam-bar, script, style, .section-audio-bar').forEach(el => el.remove());
+    return (root.innerText || root.textContent || '').replace(/\s+/g, ' ').trim();
+  }
+
+  function sectionListenText(section, moduleTitleText) {
+    if (!section) return '';
+    const bits = [
+      moduleTitleText || '',
+      section.title || '',
+      section.body || '',
+      section.rainpoleEvidence ? `Rainpole evidence: ${section.rainpoleEvidence}` : '',
+      section.gapNote ? `Not stated: ${section.gapNote}` : '',
+      section.note91 ? `9.1 informational: ${section.note91}` : ''
+    ];
+    return bits.filter(Boolean).join('. ').replace(/\s+/g, ' ').trim();
+  }
+
+  async function startListen(text, meta) {
+    if (!window.AITrainer) {
+      window.alert('Audio is unavailable in this build.');
+      return;
+    }
+    const payload = String(text || '').trim();
+    if (!payload) {
+      window.alert('Nothing to read on this page yet.');
+      return;
+    }
+    const wasPlaylist = audioPlaylist;
+    if (!wasPlaylist) stopPageAudio();
+    else if (window.AITrainer) AITrainer.stopSpeech({ silent: true });
+    setListenUi(true);
+    try {
+      const useLesson = !!(meta && AITrainer.speakLesson);
+      if (useLesson) {
+        await AITrainer.speakLesson(payload, meta, {
+          onEnd: () => {
+            if (audioPlaylist && audioPlaylist.moduleId === (meta && meta.moduleId)) {
+              advanceAudioPlaylist();
+            } else {
+              setListenUi(false);
+            }
+          }
+        });
+      } else {
+        await AITrainer.speakText(payload, {
+          onEnd: () => {
+            if (audioPlaylist) advanceAudioPlaylist();
+            else setListenUi(false);
+          }
+        });
+      }
+    } catch (err) {
+      setListenUi(false);
+      audioPlaylist = null;
+      if (!(err && (err.name === 'AbortError' || /abort/i.test(err.message || '')))) {
+        window.alert(err.message || 'Could not start audio.');
+      }
+    }
+  }
+
+  let audioPlaylist = null; // { moduleId, index }
+
+  async function advanceAudioPlaylist() {
+    if (!audioPlaylist || !course) {
+      setListenUi(false);
+      return;
+    }
+    const m = DataLoader.getModule(audioPlaylist.moduleId);
+    if (!m || !m.course || !m.course.sections.length) {
+      audioPlaylist = null;
+      setListenUi(false);
+      return;
+    }
+    const next = audioPlaylist.index + 1;
+    if (next >= m.course.sections.length) {
+      audioPlaylist = null;
+      setListenUi(false);
+      return;
+    }
+    audioPlaylist.index = next;
+    course.index = next;
+    course.check = null;
+    course.figCheck = null;
+    course.spiralCheck = null;
+    renderCourse(m.id);
+    const section = m.course.sections[next];
+    const text = sectionListenText(section, m.title);
+    await startListen(text, {
+      id: section.id,
+      title: section.title,
+      moduleTitle: m.title,
+      moduleId: m.id
+    });
+  }
+
+  async function playModuleAudio() {
+    if (!course) return;
+    if (audioPlaylist && window.AITrainer && AITrainer.isSpeaking()) {
+      stopPageAudio();
+      return;
+    }
+    const m = DataLoader.getModule(course.moduleId);
+    if (!m || !m.course) return;
+    audioPlaylist = { moduleId: m.id, index: course.index };
+    const section = m.course.sections[course.index];
+    const text = sectionListenText(section, m.title);
+    await startListen(text, {
+      id: section.id,
+      title: section.title,
+      moduleTitle: m.title,
+      moduleId: m.id
+    });
+  }
+
+  async function togglePageListen() {
+    if (window.AITrainer && AITrainer.isSpeaking && AITrainer.isSpeaking()) {
+      stopPageAudio();
+      return;
+    }
+    const { section, param } = parseHash();
+    if (section === 'course' && param) {
+      const m = DataLoader.getModule(param);
+      const s = m && m.course && m.course.sections[course && course.moduleId === param ? course.index : 0];
+      if (s) {
+        await startListen(sectionListenText(s, m.title), {
+          id: s.id,
+          title: s.title,
+          moduleTitle: m.title,
+          moduleId: m.id
+        });
+        return;
+      }
+    }
+    await startListen(pageListenText(), { id: `page:${section || 'home'}`, title: section || 'Page' });
+  }
+
+  if (listenToggle) listenToggle.addEventListener('click', () => { togglePageListen(); });
+
+  function audioEngineHint() {
+    if (window.AITrainer && AITrainer.audioStatus) return AITrainer.audioStatus();
+    return 'Add DeepSeek (script/coach) and OpenAI (Southern/Texas TTS) under AI Trainer.';
+  }
+
+  /* ====================================================================== */
   /* Sidebar                                                                */
   /* ====================================================================== */
 
@@ -208,60 +465,80 @@
   /* ====================================================================== */
 
   function renderHowTo() {
+    const seen = isHowToSeen();
     view.innerHTML = `
-      ${pageHead('HowTo', 'What this trainer is', 'Read this once before you start. It sets expectations for the self-paced path and the optional AI coach.')}
+      ${pageHead('HowTo', 'Rainpole lab + how this trainer works', 'Read this once (or skip if you already have). You are solving the Rainpole Financial Services architect lab with Broadcom-aligned method — not memorizing letter answers.')}
+
+      <section class="section howto-section howto-lab">
+        <h3>The lab you must solve: Rainpole (RFS)</h3>
+        <p>Modules are chapters of <strong>one customer design</strong>. Current-state drawings show <em>where they are</em>. Business initiatives and design decisions show <em>what they want to achieve</em>. Your job is to classify evidence (RCAR), separate FR from measurable NFR, and defend every decision with traceability + AMPRS.</p>
+        <p class="hint">Rainpole detail in the kit is thin in places. Work with what is stated. If a BR/NFR is missing, label it as an assumption to validate — do not invent customer facts. Optional BYOK AI coach is your ask channel when stuck; it must obey the same rule.</p>
+      </section>
 
       <section class="section howto-section">
-        <h3>What this is</h3>
-        <p>VCF-9 AI Trainer is a self-paced study and practice app for the VMware Cloud Foundation 9 Architect track. It turns course ideas into a focused path: short Study clips, a Course presenter with drawings and mid-section checks, then Quiz and a comprehensive Exam.</p>
-        <p>It exists because instructor-led sessions often drift and leave little room to participate. Here you must engage — wrong answers block progress until the concept is reinforced.</p>
+        <h3>Requirements spine (exam skill)</h3>
+        <ol class="howto-list">
+          <li><strong>Business intent</strong> — initiatives / outcomes Rainpole wants.</li>
+          <li><strong>Functional requirements</strong> — what the platform must do.</li>
+          <li><strong>Non-functional requirements</strong> — how well (number, %, time, RTO/RPO).</li>
+          <li><strong>RCAR</strong> — Requirements, Constraints (where they are), Assumptions, Risks.</li>
+          <li><strong>Design decision</strong> — recommendation, rejected alternative, AMPRS, cite IDs.</li>
+        </ol>
+        <p class="hint">Quiz and Exam measure this skill on the course baseline. The live Broadcom exam may use a different scenario — Rainpole is practice for the method.</p>
       </section>
 
       <section class="section howto-section">
         <h3>Teaching methods in use</h3>
         <ul class="howto-list">
-          <li><strong>Advance organizer</strong> — Study clip first (what to watch for), then full Course.</li>
-          <li><strong>What / How / Why</strong> — components and decisions taught for meaning, not letter memorization.</li>
-          <li><strong>Drawing literacy</strong> — course figures teach every labeled object, then test reading the drawing.</li>
-          <li><strong>Blocking knowledge checks</strong> — VMware-style mid-module gates; wrong → reinforce → retry; Next stays locked until correct.</li>
-          <li><strong>Decision rules</strong> — Rainpole scenarios plus Broadcom-relevant constraints (traceability, AMPRS, limits).</li>
-          <li><strong>Spaced Quiz + Exam gate</strong> — retrieval practice, then a timed comprehensive exam.</li>
+          <li><strong>Advance organizer</strong> — Study clip first, then full Course.</li>
+          <li><strong>What / How / Why</strong> — Broadcom-aligned component meaning, not letter memorization.</li>
+          <li><strong>Every section tested</strong> — if you cannot say what a term is or what it does, that section is not done. Next stays locked until the check passes.</li>
+          <li><strong>Spiral recall</strong> — later modules resurface earlier terms (e.g. vMotion) where the topic fits, so learning stacks instead of evaporating.</li>
+          <li><strong>Drawing literacy</strong> — every labeled object taught, then checked.</li>
+          <li><strong>Blocking knowledge checks</strong> — wrong → reinforce → retry; Next locked until correct.</li>
+          <li><strong>Rainpole evidence callouts</strong> — long Course sections highlight key lab facts you must use.</li>
+          <li><strong>9.1 Delta is informational</strong> — awareness only; you are not dinged for a valid 9.0/course-baseline answer solely because 9.1 later changed something.</li>
+          <li><strong>Text size</strong> — A− / A+ in the top bar (saved on this device).</li>
+          <li><strong>Listen / AI audio</strong> — DeepSeek writes a short teacher script; OpenAI speaks it in a clear <strong>Southern / Texas</strong> instructor voice. Course has Listen to section and Play module. Without keys, the device voice is used.</li>
         </ul>
       </section>
 
       <section class="section howto-section">
-        <h3>What you should expect</h3>
+        <h3>VMware / Broadcom exam item formats — locked</h3>
+        <p>This trainer follows <strong>VMware Architect question methods only</strong>. Trivia letter drills are out of scope.</p>
+        <ul class="howto-list">
+          <li><strong>Single-best-answer MCQ</strong> — one correct choice among plausible distractors (Course checks + Quiz/Exam).</li>
+          <li><strong>Multiple selection</strong> — “select two / all that apply”; every correct option must be chosen and no extras (exact set).</li>
+          <li><strong>Scenario / design-decision stems</strong> — requirements + constraints; pick the best design move. This is the beloved Architect format and the default we write toward.</li>
+          <li><strong>Exhibit / diagram literacy</strong> — read a topology or workbook figure, then decide. Drawing checks train that habit.</li>
+        </ul>
+        <p class="hint">VCAP-level build-list / matching / drag-drop may appear on advanced exams; we prioritize scenario MCQ + multi-select because that is what VCP Architect scoring and ILT remediation both reward.</p>
+      </section>
+
+      <section class="section howto-section">
+        <h3>Path</h3>
         <ol class="howto-list">
-          <li><a href="#home">Home</a> — brand entry; Enter the course.</li>
-          <li><a href="#study">Study</a> — pick a module; read the short clip and watch-fors.</li>
-          <li><strong>Course</strong> — one section at a time; drawings show object cards; checks block Next.</li>
-          <li><a href="#quiz">Quiz</a> — adaptive practice after Course.</li>
-          <li><a href="#exam">Exam</a> — end gate (separate from mid-course checks).</li>
-          <li><a href="#delta">9.1 Delta</a> — version callouts.</li>
+          <li><a href="#home">Home</a> — brand entry.</li>
+          <li><strong>HowTo</strong> — this page (skip once seen).</li>
+          <li><a href="#study">Study</a> — module tiles = map; open each module’s Course and read the long sections.</li>
+          <li><a href="#quiz">Quiz</a> / <a href="#exam">Exam</a> — retrieval and gate.</li>
+          <li><a href="#delta">9.1 Delta</a> — informational updates.</li>
+          <li><a href="#ai">AI Trainer</a> — optional bring-your-own API key coach.</li>
         </ol>
-        <p class="hint">Pass/fail on Course checks is local (authored fact sheets). You do not need an API key for the core path.</p>
       </section>
 
       <section class="section howto-section howto-ai">
-        <h3>Optional: AI-led trainer (bring your own API key)</h3>
-        <p>If you have your own <strong>OpenAI</strong> or <strong>DeepSeek</strong> API key, enable <a href="#ai">AI Trainer</a> for a coach that answers in context of the module, section, or drawing you are on.</p>
-        <ul class="howto-list">
-          <li><strong>Bring your own key</strong> — keys stay in this browser; each person uses their own.</li>
-          <li><strong>Coach ≠ grader</strong> — chat helps you understand; it does not unlock Next.</li>
-          <li><strong>Optional quorum</strong> — ask both gateways and compare answers when both keys are set.</li>
-          <li><strong>No key required</strong> — Study, Course, Quiz, and Exam work fully without AI.</li>
-        </ul>
+        <h3>Optional AI trainer (bring your own API keys)</h3>
+        <p><strong>DeepSeek</strong> = coach + spoken lesson scripts. <strong>OpenAI</strong> = Southern/Texas TTS voice only. No keys required for Study/Course/Quiz/Exam.</p>
         <div class="cta-row">
-          <a class="btn btn-primary" href="#ai">Configure AI Trainer</a>
-          <a class="btn" href="#home">Go to Home</a>
-          <a class="btn" href="#study">Enter Study</a>
+          <a class="btn" href="#ai">Configure AI Trainer</a>
         </div>
       </section>
 
-      <section class="section howto-section">
-        <h3>Sharing note</h3>
-        <p class="hint">Internal learning aid. Course-kit rights remain a separate clearance item with your director before wide redistribution of drawings or derived assets.</p>
-      </section>`;
+      <div class="cta-row howto-cta">
+        <button type="button" class="btn btn-primary" data-action="howto-continue">${seen ? 'Continue to course' : 'Got it — enter the course'}</button>
+        ${seen ? '' : '<button type="button" class="btn" data-action="howto-skip">Skip HowTo</button>'}
+      </div>`;
   }
 
   /* ====================================================================== */
@@ -270,6 +547,9 @@
 
   function renderHome() {
     document.body.classList.add('is-landing');
+    const seen = isHowToSeen();
+    const primaryHref = seen ? '#study' : '#howto';
+    const primaryLabel = seen ? 'Enter the course' : 'Start with HowTo';
     view.innerHTML = `
       <section class="landing" aria-label="VCF-9 AI Trainer">
         <div class="landing-hero">
@@ -285,9 +565,10 @@
           <div class="landing-copy">
             <p class="landing-brand">VCF-9 AI Trainer</p>
             <h2 class="landing-title">Design with evidence.<br>Prove it as you go.</h2>
-            <p class="landing-lede">Self-paced VCF 9 Architect training: study the drawings, pass blocking checks, and keep every decision tied to the conceptual model. Optional AI Trainer is bring-your-own API key — the course works fully without one.</p>
+            <p class="landing-lede">Self-paced Rainpole architect lab: study the drawings, read each Course section, pass blocking checks, and keep every decision tied to conceptual evidence. Optional AI Trainer is bring-your-own API key — the course works fully without one.</p>
             <div class="landing-actions">
-              <a class="btn btn-primary btn-lg" href="#study">Enter the course</a>
+              <a class="btn btn-primary btn-lg" href="${primaryHref}">${primaryLabel}</a>
+              ${seen ? '<a class="btn btn-lg" href="#howto">Revisit HowTo</a>' : ''}
             </div>
           </div>
         </div>
@@ -312,8 +593,9 @@
       const qCount = stats.total;
       return `
         <a class="card module-card" href="#study/${encodeURIComponent(m.id)}">
-          <span class="module-no">Module ${esc(m.number)}${m.delta91 ? ' · 9.1' : ''}</span>
+          <span class="module-no">Module ${esc(m.number)}${m.delta91 ? ' · 9.1 notes' : ''}</span>
           <h3>${esc(m.title)}</h3>
+          ${m.rainpoleJob ? `<p class="module-rainpole"><span class="fig-label">Rainpole job</span> ${esc(m.rainpoleJob)}</p>` : ''}
           <p class="module-summary">${esc(m.summary)}</p>
           <div class="module-meta">
             <span>${(m.study && m.study.highlights.length) || 0} study clips</span>
@@ -327,7 +609,7 @@
 
     view.innerHTML = `
       ${dataNotice()}
-      ${pageHead('Study', 'Modules', 'Each module starts with a short Study clip (what to watch for), then a full Course with mid-section knowledge checks you must pass before continuing. Module Quiz and the final Exam are separate.')}
+      ${pageHead('Study', 'Rainpole modules', 'Tiles are the map. Open each module, then read the Course long sections — those call out the Rainpole evidence you must use. 9.1 Delta is informational only.')}
       <div class="card-grid">${cards}</div>`;
   }
 
@@ -361,10 +643,22 @@
       <a class="backlink" href="#study">← All modules</a>
       ${pageHead(`Module ${m.number} · Study clip`, m.title, m.summary)}
 
+      ${m.rainpoleJob ? `
+        <aside class="rainpole-callout" role="note">
+          <h4>Rainpole job this module</h4>
+          <p>${esc(m.rainpoleJob)}</p>
+        </aside>` : ''}
+
+      ${m.requirementsSpine ? `
+        <aside class="rainpole-callout is-spine" role="note">
+          <h4>Requirements spine</h4>
+          <p>${esc(m.requirementsSpine)}</p>
+        </aside>` : ''}
+
       <div class="learn-path" role="note">
         <strong>How this works:</strong>
         This Study clip is the primer — what to hang onto.
-        Then open <em>Course</em> for the full presentation. Mid-section knowledge checks block Next until you answer correctly (wrong answers reinforce the concept first).
+        Then open <em>Course</em> and read each long section. Mid-section checks block Next until correct. Key Rainpole details are called out in Course — do not skip them.
       </div>
 
       <div class="quiz-bar">
@@ -416,10 +710,11 @@
     }
 
     if (!course || course.moduleId !== modId) {
-      course = { moduleId: modId, index: 0, cleared: {}, figCleared: {}, check: null, figCheck: null };
+      course = { moduleId: modId, index: 0, cleared: {}, figCleared: {}, spiralCleared: {}, check: null, figCheck: null, spiralCheck: null };
     }
     if (!course.cleared) course.cleared = {};
     if (!course.figCleared) course.figCleared = {};
+    if (!course.spiralCleared) course.spiralCleared = {};
     if (course.index < 0) course.index = 0;
     if (course.index >= m.course.sections.length) course.index = m.course.sections.length - 1;
 
@@ -446,7 +741,9 @@
 
     const figure = section.figureId ? DataLoader.getFigure(section.figureId) : null;
     const figureHtml = figure ? renderFigureBlock(section, figure) : '';
+    const evidenceHtml = renderRainpoleCallouts(section);
     const checkBlockHtml = figure ? renderFigureChecks(section, figure) : renderTextKnowledgeCheck(section);
+    const spiralHtml = primaryCheckCleared(section) ? renderSpiralRecall(modId, section) : '';
 
     const blocked = !sectionCheckCleared(section);
     const isLast = idx === sections.length - 1;
@@ -454,18 +751,27 @@
 
     view.innerHTML = `
       <a class="backlink" href="#study/${encodeURIComponent(m.id)}">← Study clip</a>
-      ${pageHead(`Module ${m.number} · Course`, m.title, `Section ${idx + 1} of ${sections.length}`)}
+      ${pageHead(`Module ${m.number != null ? m.number : m.id} · Course`, m.title, `Section ${idx + 1} of ${sections.length}`)}
 
       <div class="course-progress" aria-hidden="true">
         <div class="course-progress-bar" style="width:${Math.round(((idx + 1) / sections.length) * 100)}%"></div>
+      </div>
+
+      <div class="section-audio-bar">
+        <button type="button" class="btn btn-sm" data-action="section-listen" aria-pressed="false">Listen to section</button>
+        <button type="button" class="btn btn-sm" data-action="module-listen" aria-pressed="false">Play module</button>
+        <button type="button" class="btn btn-sm" data-action="audio-stop">Stop</button>
+        <p class="hint">${esc(audioEngineHint())}</p>
       </div>
 
       <article class="course-stage">
         <h3 class="course-section-title">${esc(section.title)}</h3>
         ${callbackBlock}
         <div class="course-body">${paras}</div>
+        ${evidenceHtml}
         ${figureHtml}
         ${checkBlockHtml}
+        ${spiralHtml}
       </article>
 
       <div class="course-nav">
@@ -477,7 +783,33 @@
               : `<a class="btn btn-primary" href="#quiz/${encodeURIComponent(m.id)}">Done — Quiz</a>`)
           : `<button type="button" class="btn btn-primary" data-action="course-next" ${nextDisabled}>Next section</button>`}
       </div>
-      <p class="hint course-hint">Knowledge checks are VMware-style mid-module blockers: wrong answers reinforce the concept; you cannot advance until correct. Drawing checks are graded locally from the figure fact sheet. The Exam is separate.</p>`;
+      <p class="hint course-hint">Every section tests what/how. Later modules add spiral recall of earlier terms. Wrong → reinforce → retry; Next stays locked until correct.</p>`;
+  }
+
+  function renderRainpoleCallouts(section) {
+    const bits = [];
+    if (section.rainpoleEvidence) {
+      bits.push(`
+        <aside class="rainpole-callout" role="note">
+          <h4>Rainpole evidence — use this</h4>
+          <p>${esc(section.rainpoleEvidence)}</p>
+        </aside>`);
+    }
+    if (section.gapNote) {
+      bits.push(`
+        <aside class="rainpole-callout is-gap" role="note">
+          <h4>Not stated in course materials</h4>
+          <p>${esc(section.gapNote)}</p>
+        </aside>`);
+    }
+    if (section.informational91 || section.note91) {
+      bits.push(`
+        <aside class="rainpole-callout is-91" role="note">
+          <h4>9.1 update — informational</h4>
+          <p>${esc(section.note91 || 'Awareness only. Rainpole lab and Course checks use the course baseline. A valid 9.0-era answer is not wrong solely because 9.1 later changed something.')}</p>
+        </aside>`);
+    }
+    return bits.join('');
   }
 
   function renderFigureBlock(section, figure) {
@@ -592,19 +924,29 @@
     if (!kc) return '';
     const cleared = !!course.cleared[section.id];
     const checkState = (course.check && course.check.sectionId === section.id) ? course.check : null;
+    const multi = isMultiItem(kc);
+    const expected = correctAnswers(kc);
+    const chosenSet = checkState
+      ? (Array.isArray(checkState.chosen) ? checkState.chosen : [checkState.chosen])
+      : (Array.isArray(course.pendingMulti) && course.pendingSectionId === section.id ? course.pendingMulti : []);
 
     const opts = kc.options.map((opt, i) => {
       let klass = 'option kc-option';
       let mark = '';
-      if (checkState && checkState.chosen === i) {
-        if (i === kc.answer) { klass += ' is-correct'; mark = '✓'; }
-        else { klass += ' is-wrong'; mark = '✕'; }
-      } else if (cleared && i === kc.answer) {
-        klass += ' is-correct'; mark = '✓';
+      if (cleared || (checkState && sameAnswerSet(chosenSet, expected))) {
+        if (expected.includes(i)) { klass += ' is-correct'; mark = '✓'; }
+        else if (chosenSet.includes(i)) { klass += ' is-wrong'; mark = '✕'; }
+      } else if (checkState && !sameAnswerSet(chosenSet, expected)) {
+        if (chosenSet.includes(i) && !expected.includes(i)) { klass += ' is-wrong'; mark = '✕'; }
+        else if (expected.includes(i) && chosenSet.includes(i)) { klass += ' is-wrong'; } /* showed wrong set */
+        else if (chosenSet.includes(i)) { klass += ' is-selected'; }
+      } else if (!cleared && !checkState && chosenSet.includes(i)) {
+        klass += ' is-selected';
       }
+      const action = multi ? 'course-toggle' : 'course-check';
+      const disabled = cleared || checkState ? 'disabled' : '';
       return `
-        <button type="button" class="${klass}" data-action="course-check" data-index="${i}"
-          ${cleared || checkState ? 'disabled' : ''}>
+        <button type="button" class="${klass}" data-action="${action}" data-index="${i}" ${disabled}>
           <span class="option-key">${letter(i)}</span>
           <span class="option-text">${esc(opt)}</span>
           ${mark ? `<span class="option-mark">${mark}</span>` : ''}
@@ -612,13 +954,13 @@
     }).join('');
 
     let feedback = '';
-    if (cleared || (checkState && checkState.chosen === kc.answer)) {
+    if (cleared || (checkState && sameAnswerSet(chosenSet, expected))) {
       feedback = `
         <div class="kc-feedback is-ok">
           <h4>Correct — concept locked in</h4>
           <p>${esc(kc.explanation || 'You can move on.')}</p>
         </div>`;
-    } else if (checkState && checkState.chosen >= 0 && checkState.chosen !== kc.answer) {
+    } else if (checkState && !sameAnswerSet(chosenSet, expected)) {
       feedback = `
         <div class="kc-feedback is-bad">
           <h4>Not yet — reinforce, then retry</h4>
@@ -627,19 +969,25 @@
         </div>`;
     }
 
+    const submitRow = (!cleared && !checkState && multi)
+      ? `<div class="qfoot"><button type="button" class="btn btn-sm btn-primary" data-action="course-submit-multi" ${chosenSet.length ? '' : 'disabled'}>Check answer</button></div>`
+      : '';
+
     return `
       <section class="kc-block" aria-label="Knowledge check">
         <div class="kc-head">
-          <span class="kc-badge">Knowledge check</span>
+          <span class="kc-badge">${multi ? 'Knowledge check · multi-select' : 'Knowledge check'}</span>
           <span class="kc-note">${cleared ? 'Passed — you may continue' : 'Must answer correctly before Next'}</span>
         </div>
         <p class="kc-stem">${esc(kc.stem)}</p>
+        ${multi ? `<p class="hint q-multi-hint">${esc(multiHint(kc))}</p>` : ''}
         <div class="options kc-options">${opts}</div>
+        ${submitRow}
         ${feedback}
       </section>`;
   }
 
-  function sectionCheckCleared(section) {
+  function primaryCheckCleared(section) {
     if (!course || !section) return true;
     if (section.figureId) {
       const figure = DataLoader.getFigure(section.figureId);
@@ -651,11 +999,87 @@
     return !!course.cleared[section.id];
   }
 
+  function sectionCheckCleared(section) {
+    if (!primaryCheckCleared(section)) return false;
+    const spiral = DataLoader.pickSpiralRecall(course.moduleId, section);
+    if (!spiral) return true;
+    return !!course.spiralCleared[section.id];
+  }
+
   function canAdvanceCourse() {
     if (!course) return false;
     const m = DataLoader.getModule(course.moduleId);
     if (!m || !m.course) return false;
     return sectionCheckCleared(m.course.sections[course.index]);
+  }
+
+  function rememberIntroducedTerms(section) {
+    const kc = section && section.knowledgeCheck;
+    if (!kc || !kc.terms || !kc.terms.length) return;
+    try {
+      const raw = localStorage.getItem('vcf9.introducedTerms');
+      const map = raw ? JSON.parse(raw) : {};
+      const bucket = map[course.moduleId] || [];
+      kc.terms.forEach(t => {
+        if (t && !bucket.includes(t)) bucket.push(t);
+      });
+      map[course.moduleId] = bucket;
+      localStorage.setItem('vcf9.introducedTerms', JSON.stringify(map));
+    } catch (err) { /* ignore */ }
+  }
+
+  function renderSpiralRecall(modId, section) {
+    const spiral = DataLoader.pickSpiralRecall(modId, section);
+    if (!spiral) return '';
+    const cleared = !!course.spiralCleared[section.id];
+    const checkState = (course.spiralCheck && course.spiralCheck.sectionId === section.id)
+      ? course.spiralCheck : null;
+    const termLabel = (spiral.terms && spiral.terms[0]) || 'earlier term';
+
+    const opts = spiral.options.map((opt, i) => {
+      let klass = 'option kc-option';
+      let mark = '';
+      if (checkState && checkState.chosen === i) {
+        if (i === spiral.answer) { klass += ' is-correct'; mark = '✓'; }
+        else { klass += ' is-wrong'; mark = '✕'; }
+      } else if (cleared && i === spiral.answer) {
+        klass += ' is-correct'; mark = '✓';
+      }
+      return `
+        <button type="button" class="${klass}" data-action="course-spiral" data-index="${i}"
+          ${cleared || checkState ? 'disabled' : ''}>
+          <span class="option-key">${letter(i)}</span>
+          <span class="option-text">${esc(opt)}</span>
+          ${mark ? `<span class="option-mark">${mark}</span>` : ''}
+        </button>`;
+    }).join('');
+
+    let feedback = '';
+    if (cleared || (checkState && checkState.chosen === spiral.answer)) {
+      feedback = `
+        <div class="kc-feedback is-ok">
+          <h4>Spiral locked — earlier learning still holds</h4>
+          <p>${esc(spiral.explanation || 'You can move on.')}</p>
+        </div>`;
+    } else if (checkState && checkState.chosen >= 0 && checkState.chosen !== spiral.answer) {
+      feedback = `
+        <div class="kc-feedback is-bad">
+          <h4>Not yet — this term was taught earlier</h4>
+          <p class="kc-reinforce">${esc(spiral.reinforce || 'Revisit the earlier Course section, then retry.')}</p>
+          <button type="button" class="btn btn-sm btn-primary" data-action="course-spiral-retry">Try again</button>
+        </div>`;
+    }
+
+    return `
+      <section class="kc-block kc-spiral" aria-label="Spiral recall">
+        <div class="kc-head">
+          <span class="kc-badge">Spiral recall · ${esc(termLabel)}</span>
+          <span class="kc-note">${cleared ? 'Passed' : 'Earlier term — must answer before Next'}</span>
+        </div>
+        <p class="kc-stem">${esc(spiral.stem)}</p>
+        <div class="options kc-options">${opts}</div>
+        ${feedback}
+      </section>`;
   }
 
   function answerCourseCheck(index) {
@@ -666,15 +1090,84 @@
     const kc = section && section.knowledgeCheck;
     if (!kc || course.cleared[section.id]) return;
     if (course.check && course.check.sectionId === section.id) return;
+    if (isMultiItem(kc)) {
+      toggleCourseOption(index);
+      return;
+    }
 
     course.check = { sectionId: section.id, chosen: index };
-    if (index === kc.answer) course.cleared[section.id] = true;
+    if (index === kc.answer) {
+      course.cleared[section.id] = true;
+      rememberIntroducedTerms(section);
+    }
+    renderCourse(course.moduleId);
+  }
+
+  function toggleCourseOption(index) {
+    if (!course) return;
+    const m = DataLoader.getModule(course.moduleId);
+    if (!m) return;
+    const section = m.course.sections[course.index];
+    const kc = section && section.knowledgeCheck;
+    if (!kc || !isMultiItem(kc) || course.cleared[section.id]) return;
+    if (course.check && course.check.sectionId === section.id) return;
+    if (course.pendingSectionId !== section.id) {
+      course.pendingSectionId = section.id;
+      course.pendingMulti = [];
+    }
+    const set = new Set(course.pendingMulti || []);
+    if (set.has(index)) set.delete(index);
+    else set.add(index);
+    course.pendingMulti = [...set].sort((a, b) => a - b);
+    renderCourse(course.moduleId);
+  }
+
+  function submitCourseMulti() {
+    if (!course) return;
+    const m = DataLoader.getModule(course.moduleId);
+    if (!m) return;
+    const section = m.course.sections[course.index];
+    const kc = section && section.knowledgeCheck;
+    if (!kc || !isMultiItem(kc) || course.cleared[section.id]) return;
+    if (course.check && course.check.sectionId === section.id) return;
+    const chosen = Array.isArray(course.pendingMulti) ? course.pendingMulti : [];
+    if (!chosen.length) return;
+    course.check = { sectionId: section.id, chosen };
+    if (sameAnswerSet(chosen, correctAnswers(kc))) {
+      course.cleared[section.id] = true;
+      rememberIntroducedTerms(section);
+      course.pendingMulti = [];
+      course.pendingSectionId = null;
+    }
     renderCourse(course.moduleId);
   }
 
   function retryCourseCheck() {
     if (!course) return;
     course.check = null;
+    course.pendingMulti = [];
+    course.pendingSectionId = null;
+    renderCourse(course.moduleId);
+  }
+
+  function answerSpiralCheck(index) {
+    if (!course) return;
+    const m = DataLoader.getModule(course.moduleId);
+    if (!m) return;
+    const section = m.course.sections[course.index];
+    if (!primaryCheckCleared(section)) return;
+    const spiral = DataLoader.pickSpiralRecall(course.moduleId, section);
+    if (!spiral || course.spiralCleared[section.id]) return;
+    if (course.spiralCheck && course.spiralCheck.sectionId === section.id) return;
+
+    course.spiralCheck = { sectionId: section.id, chosen: index };
+    if (index === spiral.answer) course.spiralCleared[section.id] = true;
+    renderCourse(course.moduleId);
+  }
+
+  function retrySpiralCheck() {
+    if (!course) return;
+    course.spiralCheck = null;
     renderCourse(course.moduleId);
   }
 
@@ -713,6 +1206,8 @@
       course.index += 1;
       course.check = null;
       course.figCheck = null;
+      course.spiralCheck = null;
+      stopPageAudio();
       renderCourse(course.moduleId);
       return true;
     }
@@ -731,40 +1226,57 @@
     }
     const cfg = AITrainer.loadConfig();
     const ready = AITrainer.isReady(cfg);
+    const status = AITrainer.audioStatus ? AITrainer.audioStatus(cfg) : '';
+    const dsSaved = AITrainer.hasKey(cfg.deepseek);
+    const oaiSaved = AITrainer.hasKey(cfg.openai);
+    const dsFp = dsSaved ? AITrainer.keyFingerprint(cfg.deepseek.apiKey) : '';
+    const oaiFp = oaiSaved ? AITrainer.keyFingerprint(cfg.openai.apiKey) : '';
     view.innerHTML = `
-      ${pageHead('AI Trainer', 'Bring your own API key', 'Advanced optional coach. The course works without keys. Coach answers do not grade or unlock Course Next.')}
+      ${pageHead('AI Trainer', 'Bring your own API keys', 'DeepSeek = coach + spoken scripts. OpenAI = Southern/Texas TTS voice. Course works without keys; coach does not grade or unlock Next.')}
 
       <section class="section">
         <h3>How it works</h3>
-        <p>Paste your own OpenAI and/or DeepSeek key. Keys stay in <code>localStorage</code> on this device and are sent only to the gateway you choose. Enable the coach to get an ask/response panel while you study.</p>
-        <p class="hint">Recommended: use this after HowTo + a Course drawing section so questions stay on-point.</p>
+        <ul class="howto-list">
+          <li><strong>DeepSeek</strong> — AI Trainer coach (Q&amp;A panel) and Course <em>spoken lesson scripts</em> (text only).</li>
+          <li><strong>OpenAI</strong> — text-to-speech only. Warm, clear <strong>Southern / Texas</strong> instructor voice via <code>gpt-4o-mini-tts</code>.</li>
+          <li><strong>Saved on this device</strong> — keys stay in <code>localStorage</code> (<code>vcf9.aiTrainer</code>). Leave a key field blank on Save to keep the stored key.</li>
+          <li><strong>Cost</strong> — pennies per section for OpenAI TTS; DeepSeek scripts are cheap; cached section replays are free.</li>
+          <li><strong>No keys</strong> — Study/Course/Quiz/Exam still work; Listen falls back to the device voice.</li>
+        </ul>
+        <p class="hint">${esc(status)}</p>
+        <p class="hint" id="aiPersistSummary">Stored keys: DeepSeek ${dsSaved ? `yes (${esc(dsFp)})` : 'no'} · OpenAI ${oaiSaved ? `yes (${esc(oaiFp)})` : 'no'}</p>
       </section>
 
       <section class="section card ai-config">
         <h3>Configuration</h3>
         <label class="ai-toggle">
           <input type="checkbox" id="aiEnabled" ${cfg.enabled ? 'checked' : ''}>
-          <span>Enable AI Trainer coach in the app</span>
+          <span>Enable AI Trainer (coach panel + DeepSeek scripts)</span>
         </label>
         <label class="ai-toggle">
           <input type="checkbox" id="aiQuorum" ${cfg.quorum ? 'checked' : ''}>
-          <span>Quorum mode (ask both enabled gateways and show both answers)</span>
+          <span>Quorum mode (ask both chat gateways — optional; coach still prefers DeepSeek first)</span>
         </label>
 
         <div class="ai-provider">
-          <h4>OpenAI</h4>
-          <label class="ai-toggle"><input type="checkbox" id="aiOpenAiOn" ${cfg.openai.enabled ? 'checked' : ''}> Use OpenAI</label>
-          <label class="field-label">API key<input type="password" id="aiOpenAiKey" autocomplete="off" spellcheck="false" value="${esc(cfg.openai.apiKey)}" placeholder="sk-…"></label>
-          <label class="field-label">Model<input type="text" id="aiOpenAiModel" value="${esc(cfg.openai.model)}"></label>
-          <label class="field-label">Base URL<input type="text" id="aiOpenAiBase" value="${esc(cfg.openai.baseUrl)}"></label>
+          <h4>DeepSeek — coach + spoken scripts</h4>
+          <p class="hint">Preferred AI Trainer. Writes teacher-style section scripts for audio. Does not generate voice.${dsSaved ? ` <strong>Key saved</strong> (${esc(dsFp)}).` : ''}</p>
+          <label class="ai-toggle"><input type="checkbox" id="aiDeepSeekOn" ${cfg.deepseek.enabled ? 'checked' : ''}> Use DeepSeek</label>
+          <label class="field-label">API key<input type="password" id="aiDeepSeekKey" autocomplete="off" spellcheck="false" value="" placeholder="${dsSaved ? 'Leave blank to keep saved key' : 'sk-…'}" data-has-saved="${dsSaved ? '1' : '0'}"></label>
+          <label class="field-label">Chat model<input type="text" id="aiDeepSeekModel" value="${esc(cfg.deepseek.model)}"></label>
+          <label class="field-label">Base URL<input type="text" id="aiDeepSeekBase" value="${esc(cfg.deepseek.baseUrl)}"></label>
         </div>
 
         <div class="ai-provider">
-          <h4>DeepSeek</h4>
-          <label class="ai-toggle"><input type="checkbox" id="aiDeepSeekOn" ${cfg.deepseek.enabled ? 'checked' : ''}> Use DeepSeek</label>
-          <label class="field-label">API key<input type="password" id="aiDeepSeekKey" autocomplete="off" spellcheck="false" value="${esc(cfg.deepseek.apiKey)}" placeholder="sk-…"></label>
-          <label class="field-label">Model<input type="text" id="aiDeepSeekModel" value="${esc(cfg.deepseek.model)}"></label>
-          <label class="field-label">Base URL<input type="text" id="aiDeepSeekBase" value="${esc(cfg.deepseek.baseUrl)}"></label>
+          <h4>OpenAI — Southern / Texas TTS voice</h4>
+          <p class="hint">Voice only. Not used for the coach when DeepSeek is available.${oaiSaved ? ` <strong>Key saved</strong> (${esc(oaiFp)}).` : ''}</p>
+          <label class="ai-toggle"><input type="checkbox" id="aiOpenAiOn" ${cfg.openai.enabled ? 'checked' : ''}> Use OpenAI TTS</label>
+          <label class="field-label">API key<input type="password" id="aiOpenAiKey" autocomplete="off" spellcheck="false" value="" placeholder="${oaiSaved ? 'Leave blank to keep saved key' : 'sk-…'}" data-has-saved="${oaiSaved ? '1' : '0'}"></label>
+          <label class="field-label">Chat model (optional / quorum only)<input type="text" id="aiOpenAiModel" value="${esc(cfg.openai.model)}"></label>
+          <label class="field-label">TTS model<input type="text" id="aiOpenAiTtsModel" value="${esc(cfg.openai.ttsModel || 'gpt-4o-mini-tts')}" placeholder="gpt-4o-mini-tts"></label>
+          <label class="field-label">TTS voice id<input type="text" id="aiOpenAiTtsVoice" value="${esc(cfg.openai.ttsVoice || 'coral')}" placeholder="coral"></label>
+          <label class="field-label">TTS style instructions<textarea id="aiOpenAiTtsStyle" rows="3">${esc(cfg.openai.ttsStyle || '')}</textarea></label>
+          <label class="field-label">Base URL<input type="text" id="aiOpenAiBase" value="${esc(cfg.openai.baseUrl)}"></label>
         </div>
 
         <div class="cta-row">
@@ -772,13 +1284,15 @@
           <button type="button" class="btn" data-action="ai-test">Test connection</button>
           <button type="button" class="btn btn-danger btn-sm" data-action="ai-clear">Clear keys</button>
         </div>
-        <p class="hint" id="aiConfigStatus">${ready ? 'Ready — coach panel will appear on Study/Course/Quiz pages.' : 'Not ready — enable AI Trainer and add at least one key.'}</p>
+        <p class="hint" id="aiConfigStatus">${ready
+          ? 'Ready — saved keys load automatically on this device.'
+          : 'Not ready — enable AI Trainer and save DeepSeek (coach/script) and/or OpenAI (TTS) keys.'}</p>
         <div id="aiTestOut" class="ai-test-out" hidden></div>
       </section>
 
       <section class="section">
         <h3>Privacy</h3>
-        <p class="hint">Questions and page context are sent to your selected API provider when you ask. Do not paste secrets or customer data into the coach.</p>
+        <p class="hint">Keys never leave this browser except when calling your chosen API. Coach questions go to DeepSeek (and OpenAI only if quorum). Spoken scripts go to DeepSeek; audio bytes come from OpenAI TTS. Progress reset does not clear keys.</p>
       </section>`;
   }
 
@@ -790,7 +1304,10 @@
         enabled: !!(document.getElementById('aiOpenAiOn') || {}).checked,
         apiKey: (document.getElementById('aiOpenAiKey') || {}).value || '',
         model: (document.getElementById('aiOpenAiModel') || {}).value || '',
-        baseUrl: (document.getElementById('aiOpenAiBase') || {}).value || ''
+        baseUrl: (document.getElementById('aiOpenAiBase') || {}).value || '',
+        ttsModel: (document.getElementById('aiOpenAiTtsModel') || {}).value || '',
+        ttsVoice: (document.getElementById('aiOpenAiTtsVoice') || {}).value || '',
+        ttsStyle: (document.getElementById('aiOpenAiTtsStyle') || {}).value || ''
       },
       deepseek: {
         enabled: !!(document.getElementById('aiDeepSeekOn') || {}).checked,
@@ -805,9 +1322,20 @@
     const cfg = AITrainer.saveConfig(readAIForm());
     const status = document.getElementById('aiConfigStatus');
     if (status) {
-      status.textContent = AITrainer.isReady(cfg)
-        ? 'Saved. Coach panel is available while you study.'
-        : 'Saved. Add a key and enable a provider to use the coach.';
+      if (cfg._persisted === false) {
+        status.textContent = `Could not save BYOK settings: ${cfg._persistError || 'storage blocked'}. Check private browsing / storage permissions.`;
+      } else {
+        const bits = [];
+        if (cfg._deepSeekSaved) bits.push(`DeepSeek ${AITrainer.keyFingerprint(cfg.deepseek.apiKey)}`);
+        if (cfg._openAiSaved) bits.push(`OpenAI ${AITrainer.keyFingerprint(cfg.openai.apiKey)}`);
+        status.textContent = bits.length
+          ? `Saved on this device — ${bits.join(' · ')}. Blank key fields keep existing keys.`
+          : 'Saved on this device — no API keys stored yet.';
+      }
+    }
+    const summary = document.getElementById('aiPersistSummary');
+    if (summary) {
+      summary.textContent = `Stored keys: DeepSeek ${cfg._deepSeekSaved ? `yes (${AITrainer.keyFingerprint(cfg.deepseek.apiKey)})` : 'no'} · OpenAI ${cfg._openAiSaved ? `yes (${AITrainer.keyFingerprint(cfg.openai.apiKey)})` : 'no'}`;
     }
     refreshSidebarStats();
     syncAiCoach();
@@ -841,10 +1369,17 @@
     if (section === 'course' && course) {
       const m = DataLoader.getModule(course.moduleId);
       const s = m && m.course && m.course.sections[course.index];
-      if (m) lines.push(`Module ${m.number}: ${m.title}`);
+      if (m) {
+        lines.push(`Module ${m.number}: ${m.title}`);
+        if (m.rainpoleJob) lines.push('Rainpole job: ' + m.rainpoleJob);
+        if (m.requirementsSpine) lines.push('Requirements spine: ' + m.requirementsSpine);
+      }
       if (s) {
         lines.push(`Course section: ${s.title}`);
         lines.push(`Section body: ${(s.body || '').slice(0, 1200)}`);
+        if (s.rainpoleEvidence) lines.push('Rainpole evidence: ' + s.rainpoleEvidence);
+        if (s.gapNote) lines.push('Gap note: ' + s.gapNote);
+        if (s.informational91 || s.note91) lines.push('9.1 informational: ' + (s.note91 || 'yes'));
         if (s.figureId) {
           const fig = DataLoader.getFigure(s.figureId);
           if (fig) {
@@ -875,7 +1410,7 @@
     const cfg = AITrainer.loadConfig();
     const show = !!(cfg.enabled && AITrainer.isReady(cfg));
     const { section } = parseHash();
-    const onContent = ['study', 'course', 'quiz', 'exam', 'delta', 'howto', 'home'].includes(section);
+    const onContent = ['study', 'course', 'quiz', 'exam', 'delta', 'howto'].includes(section);
     panel.hidden = !(show && onContent);
     document.body.classList.toggle('ai-coach-open', !panel.hidden && !panel.classList.contains('is-collapsed'));
     const status = document.getElementById('aiCoachStatus');
@@ -959,7 +1494,10 @@
       return;
     }
 
-    if (!quiz.question) quiz.question = QuizEngine.getNextQuizQuestion(filter || undefined);
+    if (!quiz.question) {
+      quiz.question = QuizEngine.getNextQuizQuestion(filter || undefined);
+      quiz.chosen = isMultiItem(quiz.question) ? [] : -1;
+    }
 
     const modules = DataLoader.getModules();
     const options = modules
@@ -1006,50 +1544,65 @@
     const q = quiz.question;
     const rec = QuizEngine.getRecord(q.id);
     const state = QuizEngine._stateOf(rec);
+    const multi = isMultiItem(q);
+    const expected = correctAnswers(q);
+    const chosenSet = multi
+      ? (Array.isArray(quiz.chosen) ? quiz.chosen : [])
+      : (quiz.chosen >= 0 ? [quiz.chosen] : []);
 
     const opts = q.options.map((text, i) => {
       let klass = 'option';
       let mark = '';
       if (quiz.answered) {
-        if (i === q.answer) { klass += ' is-correct'; mark = '✓'; }
-        else if (i === quiz.chosen) { klass += ' is-wrong'; mark = '✕'; }
+        const should = expected.includes(i);
+        const picked = chosenSet.includes(i);
+        if (should) { klass += ' is-correct'; mark = '✓'; }
+        else if (picked) { klass += ' is-wrong'; mark = '✕'; }
+      } else if (multi && chosenSet.includes(i)) {
+        klass += ' is-selected';
       }
       return `
-        <button type="button" class="${klass}" data-action="quiz-answer" data-index="${i}" ${quiz.answered ? 'disabled' : ''}>
+        <button type="button" class="${klass}" data-action="${multi ? 'quiz-toggle' : 'quiz-answer'}" data-index="${i}" ${quiz.answered ? 'disabled' : ''}>
           <span class="option-key">${letter(i)}</span>
           <span class="option-text">${esc(text)}</span>
           ${mark ? `<span class="option-mark">${mark}</span>` : ''}
         </button>`;
     }).join('');
 
-    const wasRight = quiz.answered && quiz.chosen === q.answer;
+    const wasRight = quiz.answered && sameAnswerSet(chosenSet, expected);
+    const typeLabel = multi ? 'multi-select' : esc(q.type);
 
     return `
       <div class="qcard">
         <div class="qcard-head">
           ${q.moduleId ? `<span class="chip">${esc(moduleTitle(q.moduleId))}</span>` : ''}
-          <span class="chip">${esc(q.type)}</span>
+          <span class="chip">${typeLabel}</span>
           <span class="badge badge-soft">${state}</span>
           ${q.delta91 ? badge91 : ''}
         </div>
 
         <p class="qstem">${esc(q.stem)}</p>
+        ${multi ? `<p class="hint q-multi-hint">${esc(multiHint(q))}</p>` : ''}
         <div class="options">${opts}</div>
 
         ${quiz.answered ? `
           <div class="explain ${wasRight ? 'is-correct' : 'is-wrong'}">
-            <h4>${wasRight ? 'Correct — for the right reason?' : `Incorrect — the answer is ${letter(q.answer)}`}</h4>
+            <h4>${wasRight ? 'Correct — for the right reason?' : `Incorrect — correct ${multi ? 'set is' : 'answer is'} ${lettersOf(expected)}`}</h4>
             <p>${esc(q.explanation || 'No explanation was provided for this question.')}</p>
             <p class="hint">${wasRight
               ? 'Can you restate the decision rule without looking? If not, return to Study before the next question.'
               : 'Do not memorize the letter. Open Study, re-learn the What/How/Why, then retry.'}</p>
+            ${q.note91 || q.informational91 ? `<p class="hint note91">${esc(q.note91 || '9.1 update — informational. Baseline course answers remain valid unless the stem asks “as of 9.1”.')}</p>` : ''}
           </div>
           <div class="qfoot">
             <button type="button" class="btn btn-primary" data-action="quiz-next">Next question</button>
             <span class="hint">Press <kbd>Enter</kbd> for the next question</span>
           </div>` : `
           <div class="qfoot">
-            <span class="hint">Press <kbd>1</kbd>–<kbd>${q.options.length}</kbd> to answer</span>
+            ${multi
+              ? `<button type="button" class="btn btn-primary" data-action="quiz-submit-multi" ${chosenSet.length ? '' : 'disabled'}>Check answer</button>
+                 <span class="hint">Toggle options with <kbd>1</kbd>–<kbd>${q.options.length}</kbd>, then Check</span>`
+              : `<span class="hint">Press <kbd>1</kbd>–<kbd>${q.options.length}</kbd> to answer</span>`}
           </div>`}
       </div>`;
   }
@@ -1073,10 +1626,13 @@
 
   function answerQuiz(index) {
     if (!quiz || !quiz.question || quiz.answered) return;
-
     const q = quiz.question;
-    const correct = index === q.answer;
+    if (isMultiItem(q)) {
+      toggleQuizOption(index);
+      return;
+    }
 
+    const correct = index === q.answer;
     quiz.answered = true;
     quiz.chosen = index;
     quiz.asked += 1;
@@ -1091,11 +1647,39 @@
     if (next) next.focus();
   }
 
+  function toggleQuizOption(index) {
+    if (!quiz || !quiz.question || quiz.answered) return;
+    if (!Array.isArray(quiz.chosen)) quiz.chosen = [];
+    const set = new Set(quiz.chosen);
+    if (set.has(index)) set.delete(index);
+    else set.add(index);
+    quiz.chosen = [...set].sort((a, b) => a - b);
+    repaintQuizCard();
+  }
+
+  function submitQuizMulti() {
+    if (!quiz || !quiz.question || quiz.answered) return;
+    const q = quiz.question;
+    if (!isMultiItem(q)) return;
+    const chosen = Array.isArray(quiz.chosen) ? quiz.chosen : [];
+    if (!chosen.length) return;
+    const correct = sameAnswerSet(chosen, correctAnswers(q));
+    quiz.answered = true;
+    quiz.asked += 1;
+    if (correct) quiz.correct += 1;
+    QuizEngine.recordAnswer(q.id, correct);
+    repaintQuizCard();
+    updateQuizBar();
+    refreshSidebarStats();
+    const next = document.querySelector('[data-action="quiz-next"]');
+    if (next) next.focus();
+  }
+
   function nextQuizQuestion() {
     if (!quiz) return;
     quiz.answered = false;
-    quiz.chosen = -1;
     quiz.question = QuizEngine.getNextQuizQuestion(quiz.filter || undefined);
+    quiz.chosen = isMultiItem(quiz.question) ? [] : -1;
     renderQuiz(quiz.filter);
   }
 
@@ -1130,6 +1714,7 @@
         <div class="card">
           <ul class="instructions">
             <li>${count} questions drawn across all modules, weighted towards your weaker areas.</li>
+            <li>Item types follow VMware Architect methods: single-best-answer and multi-select (exact set).</li>
             <li>${EXAM_MINUTES} minute time limit — the exam submits automatically when time runs out.</li>
             <li>Pass mark is ${PASS_PCT}%.</li>
             <li>Use the navigator to jump between questions; unanswered items are scored as incorrect.</li>
@@ -1185,20 +1770,25 @@
 
   function renderExamRunner() {
     const q = DataLoader.getQuestion(exam.ids[exam.index]);
-    const answered = exam.answers.filter(a => a !== null).length;
+    const answered = exam.answers.filter(a => a !== null && !(Array.isArray(a) && !a.length)).length;
     const remaining = (exam.endsAt - Date.now()) / 1000;
+    const multi = isMultiItem(q);
+    const selected = exam.answers[exam.index];
+    const selectedSet = Array.isArray(selected) ? selected : (selected === null || selected === undefined ? [] : [selected]);
 
     const navigator = exam.ids.map((id, i) => {
       const klass = ['nav-num'];
-      if (exam.answers[i] !== null) klass.push('is-answered');
+      const ans = exam.answers[i];
+      const has = ans !== null && !(Array.isArray(ans) && !ans.length);
+      if (has) klass.push('is-answered');
       if (i === exam.index) klass.push('is-current');
       return `<button type="button" class="${klass.join(' ')}" data-action="exam-goto" data-index="${i}"
-                aria-label="Question ${i + 1}${exam.answers[i] !== null ? ', answered' : ', unanswered'}">${i + 1}</button>`;
+                aria-label="Question ${i + 1}${has ? ', answered' : ', unanswered'}">${i + 1}</button>`;
     }).join('');
 
     const opts = q ? q.options.map((text, i) => `
-      <button type="button" class="option ${exam.answers[exam.index] === i ? 'is-selected' : ''}"
-              data-action="exam-answer" data-index="${i}">
+      <button type="button" class="option ${selectedSet.includes(i) ? 'is-selected' : ''}"
+              data-action="${multi ? 'exam-toggle' : 'exam-answer'}" data-index="${i}">
         <span class="option-key">${letter(i)}</span>
         <span class="option-text">${esc(text)}</span>
       </button>`).join('') : '';
@@ -1218,12 +1808,16 @@
           <div class="qcard-head">
             <span class="chip">Question ${exam.index + 1} of ${exam.ids.length}</span>
             ${q.moduleId ? `<span class="chip">${esc(moduleTitle(q.moduleId))}</span>` : ''}
+            ${multi ? '<span class="chip">multi-select</span>' : ''}
             ${q.delta91 ? badge91 : ''}
           </div>
           <p class="qstem">${esc(q.stem)}</p>
+          ${multi ? `<p class="hint q-multi-hint">${esc(multiHint(q))}</p>` : ''}
           <div class="options">${opts}</div>
           <div class="qfoot">
-            <span class="hint">Press <kbd>1</kbd>–<kbd>${q.options.length}</kbd> to answer, <kbd>Enter</kbd> for next</span>
+            <span class="hint">${multi
+              ? `Toggle with <kbd>1</kbd>–<kbd>${q.options.length}</kbd>; selection is saved automatically`
+              : `Press <kbd>1</kbd>–<kbd>${q.options.length}</kbd> to answer, <kbd>Enter</kbd> for next`}</span>
           </div>
         </div>` : emptyState('This question could not be loaded.')}
 
@@ -1237,19 +1831,43 @@
      navigator's position under the thumb stay put on touch devices. */
   function answerExam(index) {
     if (!exam || exam.phase !== 'running') return;
+    const q = DataLoader.getQuestion(exam.ids[exam.index]);
+    if (isMultiItem(q)) {
+      toggleExamOption(index);
+      return;
+    }
     exam.answers[exam.index] = index;
+    patchExamSelectionUI();
+  }
+
+  function toggleExamOption(index) {
+    if (!exam || exam.phase !== 'running') return;
+    const cur = exam.answers[exam.index];
+    const set = new Set(Array.isArray(cur) ? cur : []);
+    if (set.has(index)) set.delete(index);
+    else set.add(index);
+    const next = [...set].sort((a, b) => a - b);
+    exam.answers[exam.index] = next.length ? next : null;
+    patchExamSelectionUI();
+  }
+
+  function patchExamSelectionUI() {
+    const q = DataLoader.getQuestion(exam.ids[exam.index]);
+    const selected = exam.answers[exam.index];
+    const selectedSet = Array.isArray(selected) ? selected : (selected === null || selected === undefined ? [] : [selected]);
 
     view.querySelectorAll('.options .option').forEach((btn, i) => {
-      btn.classList.toggle('is-selected', i === index);
+      btn.classList.toggle('is-selected', selectedSet.includes(i));
     });
 
+    const has = selected !== null && !(Array.isArray(selected) && !selected.length);
     const navBtn = view.querySelectorAll('.nav-num')[exam.index];
     if (navBtn) {
-      navBtn.classList.add('is-answered');
-      navBtn.setAttribute('aria-label', `Question ${exam.index + 1}, answered`);
+      navBtn.classList.toggle('is-answered', has);
+      navBtn.setAttribute('aria-label', `Question ${exam.index + 1}${has ? ', answered' : ', unanswered'}`);
     }
 
-    const answered = exam.answers.filter(a => a !== null).length;
+    const answered = exam.answers.filter(a => a !== null && !(Array.isArray(a) && !a.length)).length;
     const counter = document.getElementById('examAnswered');
     if (counter) counter.innerHTML = `${answered}/${exam.ids.length} <span>answered</span>`;
     const navCount = document.getElementById('examNavCount');
@@ -1266,7 +1884,7 @@
   function submitExam(auto) {
     if (!exam || exam.phase !== 'running') return;
 
-    const unanswered = exam.answers.filter(a => a === null).length;
+    const unanswered = exam.answers.filter(a => a === null || (Array.isArray(a) && !a.length)).length;
     if (!auto && unanswered > 0 &&
         !window.confirm(`${unanswered} question${unanswered === 1 ? '' : 's'} left unanswered. They will be marked incorrect. Submit anyway?`)) {
       return;
@@ -1280,11 +1898,14 @@
       const q = DataLoader.getQuestion(id);
       if (!q) return;
       const chosen = exam.answers[i];
-      const correct = chosen === q.answer;
+      const expected = correctAnswers(q);
+      const chosenSet = Array.isArray(chosen) ? chosen : (chosen === null || chosen === undefined ? [] : [chosen]);
+      const answered = chosen !== null && !(Array.isArray(chosen) && !chosen.length);
+      const correct = answered && sameAnswerSet(chosenSet, expected);
       if (correct) score += 1;
       else wrongIds.push(id);
       /* Skipped questions are not graded into the review schedule. */
-      if (chosen !== null) QuizEngine.recordAnswer(id, correct);
+      if (answered) QuizEngine.recordAnswer(id, correct);
     });
 
     const durationSec = Math.round((Date.now() - exam.startedAt) / 1000);
@@ -1310,10 +1931,13 @@
     const wrong = r.wrongIds.map((id, i) => {
       const q = DataLoader.getQuestion(id);
       if (!q) return '';
-      const chosenIndex = exam.ids.indexOf(id) >= 0 ? exam.answers[exam.ids.indexOf(id)] : null;
-      const chosen = chosenIndex === null || chosenIndex === undefined
+      const chosenRaw = exam.ids.indexOf(id) >= 0 ? exam.answers[exam.ids.indexOf(id)] : null;
+      const expected = correctAnswers(q);
+      const chosenSet = Array.isArray(chosenRaw) ? chosenRaw : (chosenRaw === null || chosenRaw === undefined ? [] : [chosenRaw]);
+      const chosen = !chosenSet.length
         ? '<em>not answered</em>'
-        : `${letter(chosenIndex)} — ${esc(q.options[chosenIndex])}`;
+        : chosenSet.map(ci => `${letter(ci)} — ${esc(q.options[ci])}`).join('<br>');
+      const correctHtml = expected.map(ci => `${letter(ci)} — ${esc(q.options[ci])}`).join('<br>');
 
       return `
         <details class="disclosure"${i === 0 ? ' open' : ''}>
@@ -1330,7 +1954,7 @@
               </div>
               <div class="whw-block whw-how">
                 <h4>Correct answer</h4>
-                <p>${letter(q.answer)} — ${esc(q.options[q.answer])}</p>
+                <p>${correctHtml}</p>
               </div>
             </div>
             ${q.explanation ? `<div class="explain"><h4>Explanation</h4><p>${esc(q.explanation)}</p></div>` : ''}
@@ -1403,13 +2027,17 @@
 
     view.innerHTML = `
       ${dataNotice()}
-      ${pageHead('9.1 Delta', 'What changed in VCF 9.1', `${total} changes across ${areas.length} areas, with links back to the modules they affect.`)}
+      ${pageHead('9.1 Delta', 'Informational updates', `${total} changes across ${areas.length} areas. This page is awareness only — scoring and the Rainpole lab use the course baseline. You are not dinged for a valid 9.0-era answer solely because 9.1 later changed something.`)}
+      <div class="notice delta-info-banner">
+        <h3>Informational — not a scoring trap</h3>
+        <p>Use Delta to stay current. Course checks, Quiz, and Exam grade Rainpole / course-baseline design answers unless a question explicitly asks “as of 9.1”.</p>
+      </div>
       ${areas.map(group => `
         <section class="section">
           <h3>${esc(group.area)}<span class="section-count">${group.items.length}</span></h3>
           ${group.items.map(item => `
             <div class="delta-item">
-              <h4>${esc(item.title)} ${badge91}</h4>
+              <h4>${esc(item.title)} ${badge91} <span class="badge badge-soft">Informational</span></h4>
               ${item.description ? `<p>${esc(item.description)}</p>` : ''}
               ${item.detail ? `<p class="delta-detail">${esc(item.detail)}</p>` : ''}
               ${item.modules.length ? `
@@ -1505,6 +2133,8 @@
   function route() {
     const { section, param } = parseHash();
 
+    stopPageAudio();
+
     /* Leaving the exam mid-run must not leave a timer ticking. */
     if (section !== 'exam') stopExamTimer();
 
@@ -1566,13 +2196,22 @@
     const index = Number(target.dataset.index);
 
     switch (target.dataset.action) {
+      case 'howto-continue':
+      case 'howto-skip':
+        continueFromHowTo();
+        break;
       case 'quiz-answer': answerQuiz(index); break;
+      case 'quiz-toggle': toggleQuizOption(index); break;
+      case 'quiz-submit-multi': submitQuizMulti(); break;
       case 'quiz-next':   nextQuizQuestion(); break;
+      case 'exam-toggle': toggleExamOption(index); break;
       case 'course-prev':
         if (course) {
           course.index = Math.max(0, course.index - 1);
           course.check = null;
           course.figCheck = null;
+          course.spiralCheck = null;
+          stopPageAudio();
           renderCourse(course.moduleId);
         }
         break;
@@ -1582,8 +2221,49 @@
       case 'course-check':
         answerCourseCheck(index);
         break;
+      case 'course-toggle':
+        toggleCourseOption(index);
+        break;
+      case 'course-submit-multi':
+        submitCourseMulti();
+        break;
       case 'course-check-retry':
         retryCourseCheck();
+        break;
+      case 'course-spiral':
+        answerSpiralCheck(index);
+        break;
+      case 'course-spiral-retry':
+        retrySpiralCheck();
+        break;
+      case 'section-listen': {
+        if (window.AITrainer && AITrainer.isSpeaking && AITrainer.isSpeaking() && !audioPlaylist) {
+          stopPageAudio();
+          break;
+        }
+        audioPlaylist = null;
+        const mListen = course && DataLoader.getModule(course.moduleId);
+        const sListen = mListen && mListen.course && mListen.course.sections[course.index];
+        const text = sectionListenText(sListen, mListen && mListen.title);
+        startListen(text, {
+          id: sListen && sListen.id,
+          title: sListen && sListen.title,
+          moduleTitle: mListen && mListen.title,
+          moduleId: mListen && mListen.id
+        }).then(() => {
+          const btn = view.querySelector('[data-action="section-listen"]');
+          if (btn && window.AITrainer && AITrainer.isSpeaking && AITrainer.isSpeaking()) {
+            btn.textContent = 'Stop audio';
+            btn.setAttribute('aria-pressed', 'true');
+          }
+        });
+        break;
+      }
+      case 'module-listen':
+        playModuleAudio();
+        break;
+      case 'audio-stop':
+        stopPageAudio();
         break;
       case 'fig-check':
         answerFigureCheck(index);
@@ -1599,7 +2279,7 @@
         break;
       case 'ai-clear':
         if (window.confirm('Clear saved AI Trainer keys and disable the coach on this device?')) {
-          AITrainer.saveConfig(AITrainer.defaultConfig());
+          AITrainer.clearKeys ? AITrainer.clearKeys() : AITrainer.saveConfig(AITrainer.defaultConfig(), { clearOpenAiKey: true, clearDeepSeekKey: true });
           renderAI();
           refreshSidebarStats();
           syncAiCoach();
@@ -1678,9 +2358,14 @@
     }
 
     if (event.key === 'Enter') {
-      if (section === 'quiz' && quiz && quiz.answered) {
-        event.preventDefault();
-        nextQuizQuestion();
+      if (section === 'quiz' && quiz) {
+        if (quiz.answered) {
+          event.preventDefault();
+          nextQuizQuestion();
+        } else if (isMultiItem(quiz.question) && Array.isArray(quiz.chosen) && quiz.chosen.length) {
+          event.preventDefault();
+          submitQuizMulti();
+        }
       } else if (section === 'course' && course) {
         if (!canAdvanceCourse()) return;
         event.preventDefault();
@@ -1703,6 +2388,7 @@
   /* ====================================================================== */
 
   initTheme();
+  initFontScale();
 
   const coachForm = document.getElementById('aiCoachForm');
   if (coachForm) {

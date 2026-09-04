@@ -158,7 +158,33 @@ window.QuizEngine = (function () {
   /* ------------------------------------------------------------- scheduling */
 
   /* Priority order: most-overdue reviews, then unseen questions from the
-     weakest module, then whatever review is closest to falling due. */
+     weakest module (with spiral boost for terms introduced earlier), then
+     whatever review is closest to falling due. */
+  function introducedTermSet() {
+    try {
+      const raw = localStorage.getItem('vcf9.introducedTerms');
+      const map = raw ? JSON.parse(raw) : {};
+      const set = new Set();
+      Object.keys(map || {}).forEach(modId => {
+        (map[modId] || []).forEach(t => { if (t) set.add(String(t).toLowerCase()); });
+      });
+      return set;
+    } catch (err) {
+      return new Set();
+    }
+  }
+
+  function spiralScore(q, introduced) {
+    if (!q || !introduced.size) return 0;
+    const terms = (q.terms || []).map(t => String(t).toLowerCase());
+    const hay = `${q.stem || ''} ${(q.terms || []).join(' ')}`.toLowerCase();
+    let hits = 0;
+    introduced.forEach(t => {
+      if (terms.includes(t) || hay.includes(t)) hits += 1;
+    });
+    return hits;
+  }
+
   function getNextQuizQuestion(moduleFilter) {
     const candidates = pool(moduleFilter);
     if (!candidates.length) return null;
@@ -166,6 +192,7 @@ window.QuizEngine = (function () {
     const today = dayKey();
     const seen = [];
     const unseen = [];
+    const introduced = introducedTermSet();
 
     candidates.forEach(q => {
       const rec = records[q.id];
@@ -177,20 +204,30 @@ window.QuizEngine = (function () {
       .filter(({ rec }) => isDue(rec, today))
       .sort((a, b) => {
         const lag = daysBetween(a.rec.nextReviewDate, today) - daysBetween(b.rec.nextReviewDate, today);
-        if (lag !== 0) return -lag;                          // more overdue first
-        return a.rec.easeFactor - b.rec.easeFactor;          // then hardest
+        if (lag !== 0) return -lag;
+        const spiral = spiralScore(b.q, introduced) - spiralScore(a.q, introduced);
+        if (spiral !== 0) return spiral;
+        return a.rec.easeFactor - b.rec.easeFactor;
       });
 
     if (overdue.length) return overdue[0].q;
 
     if (unseen.length) {
       const weakness = moduleWeakness();
-      unseen.sort((a, b) => (weakness[b.moduleId] || 0) - (weakness[a.moduleId] || 0));
+      unseen.sort((a, b) => {
+        const w = (weakness[b.moduleId] || 0) - (weakness[a.moduleId] || 0);
+        if (w !== 0) return w;
+        return spiralScore(b, introduced) - spiralScore(a, introduced);
+      });
       return unseen[0];
     }
 
     seen.sort((a, b) => {
-      if (a.rec.nextReviewDate === b.rec.nextReviewDate) return a.rec.easeFactor - b.rec.easeFactor;
+      if (a.rec.nextReviewDate === b.rec.nextReviewDate) {
+        const spiral = spiralScore(b.q, introduced) - spiralScore(a.q, introduced);
+        if (spiral !== 0) return spiral;
+        return a.rec.easeFactor - b.rec.easeFactor;
+      }
       return a.rec.nextReviewDate < b.rec.nextReviewDate ? -1 : 1;
     });
     return seen.length ? seen[0].q : null;

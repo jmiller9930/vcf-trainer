@@ -39,9 +39,17 @@
     </a>
   </div>
 
-  <button id="themeToggle" class="iconbtn" type="button" aria-label="Switch colour theme">
-    <span class="theme-icon" aria-hidden="true"></span>
-  </button>
+  <div class="appbar-tools" role="group" aria-label="Display and audio">
+    <div class="font-tools" role="group" aria-label="Text size">
+      <button id="fontDecrease" class="iconbtn" type="button" aria-label="Decrease text size" title="Smaller text">A−</button>
+      <span id="fontScaleLabel" class="font-scale-label" aria-live="polite">100%</span>
+      <button id="fontIncrease" class="iconbtn" type="button" aria-label="Increase text size" title="Larger text">A+</button>
+    </div>
+    <button id="listenToggle" class="iconbtn" type="button" aria-label="Listen to this page" title="Listen to this page" aria-pressed="false">▶</button>
+    <button id="themeToggle" class="iconbtn" type="button" aria-label="Switch colour theme">
+      <span class="theme-icon" aria-hidden="true"></span>
+    </button>
+  </div>
 </header>
 
 <div class="layout">
