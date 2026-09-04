@@ -224,10 +224,20 @@ button { font: inherit; color: inherit; }
   align-items: center;
   gap: .5rem;
   margin: 0 0 1rem;
-  padding: .65rem .8rem;
+  padding: .75rem .85rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg-sunken);
+}
+.section-audio-bar .audio-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .45rem;
+  width: 100%;
+}
+.section-audio-bar .audio-controls .btn {
+  min-width: 7.5rem;
+  font-weight: 700;
 }
 .course-where {
   display: flex;
