@@ -1,6 +1,6 @@
 /* VCF 9 Trainer — service worker: network-first for app shell so deploys win. */
 
-const CACHE_NAME = 'vcf-trainer-v22';
+const CACHE_NAME = 'vcf-trainer-v23';
 
 const CORE_ASSETS = [
   './',

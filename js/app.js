@@ -242,7 +242,7 @@
   function setListenUi(playing) {
     if (!listenToggle) return;
     const phase = window.AITrainer && AITrainer.getAudioPhase ? AITrainer.getAudioPhase() : (playing ? 'playing' : 'idle');
-    const busy = !!playing || phase === 'preparing';
+    const busy = !!playing || phase === 'preparing' || phase === 'playing';
     listenToggle.classList.toggle('is-playing', busy);
     listenToggle.setAttribute('aria-pressed', busy ? 'true' : 'false');
     listenToggle.setAttribute('aria-label', busy ? 'Stop listening' : 'Start listening');
@@ -262,11 +262,10 @@
     }
     if (stopBtn) stopBtn.disabled = !busy;
     if (status) {
-      if (!busy || phase === 'idle') status.textContent = 'Idle — press Start for this section.';
-      else if (phase === 'preparing') status.textContent = 'Preparing… (script / OpenAI voice). Press Stop to cancel.';
-      else if (phase === 'playing-openai') status.textContent = 'Playing OpenAI voice (Southern/Texas).';
-      else if (phase === 'playing-browser') status.textContent = 'Playing device voice.';
-      else status.textContent = 'Playing…';
+      if (!busy || phase === 'idle') status.textContent = 'Idle — OpenAI voice pipeline. Press Start.';
+      else if (phase === 'preparing') status.textContent = 'OpenAI pipeline: preparing… Press Stop to cancel.';
+      else if (phase === 'playing') status.textContent = 'OpenAI pipeline: playing (Southern/Texas).';
+      else status.textContent = 'OpenAI pipeline running…';
     }
     const modBtn = document.querySelector('[data-action="module-listen"]');
     if (modBtn) {
@@ -301,7 +300,7 @@
   }
 
   async function startListen(text, meta) {
-    if (!window.AITrainer) {
+    if (!window.AITrainer || !AITrainer.play) {
       window.alert('Audio is unavailable in this build.');
       return;
     }
@@ -311,9 +310,8 @@
       return;
     }
     const wasPlaylist = audioPlaylist;
-    /* Always kill prior engine first — never stack robot + OpenAI */
     if (!wasPlaylist) stopPageAudio();
-    else if (window.AITrainer) AITrainer.stopSpeech({ silent: true });
+    else AITrainer.stopSpeech({ silent: true });
     setListenUi(true);
     let statusTimer = setInterval(() => {
       if (!(AITrainer.isSpeaking && AITrainer.isSpeaking())) {
@@ -324,40 +322,24 @@
       setListenUi(true);
     }, 400);
     try {
-      const useLesson = !!(meta && AITrainer.speakLesson);
-      let result;
-      if (useLesson) {
-        result = await AITrainer.speakLesson(payload, meta, {
-          onEnd: () => {
-            if (statusTimer) { clearInterval(statusTimer); statusTimer = null; }
-            if (audioPlaylist && audioPlaylist.moduleId === (meta && meta.moduleId)) {
-              advanceAudioPlaylist();
-            } else {
-              setListenUi(false);
-            }
+      const result = await AITrainer.play(payload, meta || null, {
+        onEnd: () => {
+          if (statusTimer) { clearInterval(statusTimer); statusTimer = null; }
+          if (audioPlaylist && meta && audioPlaylist.moduleId === meta.moduleId) {
+            advanceAudioPlaylist();
+          } else {
+            setListenUi(false);
           }
-        });
-      } else {
-        result = await AITrainer.speakText(payload, {
-          onEnd: () => {
-            if (statusTimer) { clearInterval(statusTimer); statusTimer = null; }
-            if (audioPlaylist) advanceAudioPlaylist();
-            else setListenUi(false);
-          }
-        });
-      }
-      if (result && result.engine === 'aborted') {
-        setListenUi(false);
-      } else if (!(AITrainer.isSpeaking && AITrainer.isSpeaking())) {
-        /* Playback finished without onEnd in some abort paths */
-        setListenUi(!!(AITrainer.isSpeaking && AITrainer.isSpeaking()));
-      }
+        }
+      });
+      if (result && result.engine === 'aborted') setListenUi(false);
+      else if (!(AITrainer.isSpeaking && AITrainer.isSpeaking())) setListenUi(false);
     } catch (err) {
       if (statusTimer) { clearInterval(statusTimer); statusTimer = null; }
       setListenUi(false);
       audioPlaylist = null;
       if (!(err && (err.name === 'AbortError' || /abort/i.test(err.message || '')))) {
-        window.alert(err.message || 'Could not start audio.');
+        window.alert(err.message || 'Could not start OpenAI voice.');
       }
     } finally {
       if (statusTimer) clearInterval(statusTimer);
@@ -1445,7 +1427,7 @@
         <div class="ai-provider ai-role-tts">
           <h4>OpenAI — TTS voice only (Southern / Texas)</h4>
           <p class="hint">Voice only. Not the AI Trainer coach.${oaiSaved ? ` <strong>Key saved</strong> (${esc(oaiFp)}).` : ''}</p>
-          <p class="hint">If OpenAI is enabled, Listen uses <strong>only</strong> OpenAI voice (no automatic device-voice fallback — that caused robot/AI overlap). Use Start / Stop on the Course audio bar. Check billing in the OpenAI dashboard if voice fails.</p>
+          <p class="hint">Listen uses <strong>one OpenAI pipeline only</strong> — no device-voice fallback. Start / Stop on the Course audio bar.</p>
           <label class="ai-toggle"><input type="checkbox" id="aiOpenAiOn" ${cfg.openai.enabled ? 'checked' : ''}> Use OpenAI for TTS</label>
           <label class="field-label">API key<input type="password" id="aiOpenAiKey" autocomplete="off" spellcheck="false" value="" placeholder="${oaiSaved ? 'Leave blank to keep saved key' : 'sk-…'}"></label>
           <label class="field-label">TTS model<input type="text" id="aiOpenAiTtsModel" value="${esc(cfg.openai.ttsModel || 'gpt-4o-mini-tts')}" placeholder="gpt-4o-mini-tts"></label>
