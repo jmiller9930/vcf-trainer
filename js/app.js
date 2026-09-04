@@ -255,13 +255,17 @@
     try { localStorage.setItem(AUDIO_ESCORT_KEY, on ? '1' : '0'); } catch (err) { /* ignore */ }
   }
 
+  function hasDedicatedAudioBar() {
+    const { section, param } = parseHash();
+    return section === 'course' || (section === 'study' && !!param);
+  }
+
   function setListenUi(playing) {
     if (!listenToggle) return;
-    const { section } = parseHash();
-    const onCourse = section === 'course';
-    /* Course page has its own Play/Stop/Preload row — hide the lone top ▶ so it is not mistaken for the only control */
-    listenToggle.hidden = onCourse;
-    listenToggle.style.display = onCourse ? 'none' : '';
+    /* Study clip + Course own the Play/Stop/Preload row — hide the lone top ▶ */
+    const hideTop = hasDedicatedAudioBar();
+    listenToggle.hidden = hideTop;
+    listenToggle.style.display = hideTop ? 'none' : '';
     const phase = window.AITrainer && AITrainer.getAudioPhase ? AITrainer.getAudioPhase() : (playing ? 'playing' : 'idle');
     const busy = !!playing || phase === 'preparing' || phase === 'playing';
     listenToggle.classList.toggle('is-playing', busy);
@@ -273,13 +277,20 @@
   }
 
   function syncCourseAudioBar(busy, phase) {
+    const bar = document.querySelector('.section-audio-bar');
+    const mode = (bar && bar.getAttribute('data-audio-mode')) || 'course';
+    const playLabel = mode === 'study' ? '▶ Play clip' : '▶ Play section';
+    const playReady = mode === 'study' ? 'Ready — voice cached. Press ▶ Play clip.' : 'Ready — voice cached. Press ▶ Play section.';
+    const idleHint = mode === 'study'
+      ? 'Four controls: Play clip · Stop · Preload · Play course.'
+      : 'Four controls: Play section · Stop · Preload · Play module.';
     const startBtn = document.querySelector('[data-action="section-listen"]');
     const stopBtn = document.querySelector('[data-action="audio-stop"]');
     const preloadBtn = document.querySelector('[data-action="audio-preload"]');
     const status = document.getElementById('audioLiveStatus');
     const loader = document.getElementById('audioLoader');
     if (startBtn) {
-      startBtn.textContent = busy && phase === 'playing' ? '▶ Playing…' : (busy ? '⏳ Loading…' : '▶ Play section');
+      startBtn.textContent = busy && phase === 'playing' ? '▶ Playing…' : (busy ? '⏳ Loading…' : playLabel);
       startBtn.disabled = !!busy;
       startBtn.setAttribute('aria-pressed', busy ? 'true' : 'false');
     }
@@ -294,13 +305,17 @@
     if (loader) loader.hidden = !(phase === 'preparing');
     if (status) {
       if (phase === 'preparing') status.textContent = 'Loading OpenAI voice… Press ■ Stop to cancel.';
-      else if (phase === 'playing') status.textContent = 'Playing OpenAI voice. Next locked until finish (if escort on).';
-      else if (phase === 'ready') status.textContent = 'Ready — voice cached. Press ▶ Play section.';
-      else status.textContent = 'Four controls: Play section · Stop · Preload · Play module.';
+      else if (phase === 'playing') {
+        status.textContent = mode === 'study'
+          ? 'Playing OpenAI voice for this Study clip.'
+          : 'Playing OpenAI voice. Next locked until finish (if escort on).';
+      } else if (phase === 'ready') status.textContent = playReady;
+      else status.textContent = idleHint;
     }
     const modBtn = document.querySelector('[data-action="module-listen"]');
     if (modBtn) {
-      modBtn.textContent = audioPlaylist && busy ? '▶▶ Playing module…' : '▶▶ Play module';
+      const modIdle = mode === 'study' ? '▶▶ Play course' : '▶▶ Play module';
+      modBtn.textContent = audioPlaylist && busy ? '▶▶ Playing module…' : modIdle;
       modBtn.setAttribute('aria-pressed', audioPlaylist && busy ? 'true' : 'false');
     }
     const nextBtn = document.querySelector('[data-action="course-next"]');
@@ -311,6 +326,54 @@
       nextBtn.disabled = blocked;
     }
   }
+
+  function audioBarHtml(mode) {
+    const escort = audioEscortOn();
+    const ttsReady = !!(window.AITrainer && AITrainer.isTtsReady && AITrainer.isTtsReady());
+    const isStudy = mode === 'study';
+    const playLabel = isStudy ? '▶ Play clip' : '▶ Play section';
+    const playTitle = isStudy ? 'Play this Study clip with OpenAI voice' : 'Play this section with OpenAI voice';
+    const modLabel = isStudy ? '▶▶ Play course' : '▶▶ Play module';
+    const modTitle = isStudy
+      ? 'Open Course and play every section in this module'
+      : 'Play every section in this module';
+    const idle = isStudy
+      ? 'Four controls: Play clip · Stop · Preload · Play course.'
+      : 'Idle — use Preload for no lag, then Play section.';
+    return `
+      <div class="section-audio-bar" data-audio-mode="${isStudy ? 'study' : 'course'}" role="group" aria-label="${isStudy ? 'Study clip audio controls' : 'Section audio controls'}">
+        <div class="audio-controls">
+          <button type="button" class="btn btn-sm btn-primary" data-action="section-listen" aria-pressed="false" title="${esc(playTitle)}">${playLabel}</button>
+          <button type="button" class="btn btn-sm" data-action="audio-stop" disabled title="Stop voice">■ Stop</button>
+          <button type="button" class="btn btn-sm" data-action="audio-preload" ${ttsReady ? '' : 'disabled'} title="Download voice now so Play has no lag">⬇ Preload</button>
+          <button type="button" class="btn btn-sm" data-action="module-listen" aria-pressed="false" title="${esc(modTitle)}">${modLabel}</button>
+        </div>
+        <span class="audio-loader" id="audioLoader" hidden aria-hidden="true"></span>
+        <p class="hint" id="audioLiveStatus">${esc(idle)}</p>
+        ${isStudy ? '' : `
+        <label class="ai-toggle audio-escort-toggle">
+          <input type="checkbox" id="audioEscortToggle" data-action="audio-escort" ${escort ? 'checked' : ''}>
+          <span>Hold Next until this section’s audio finishes</span>
+        </label>`}
+        <p class="hint">${esc(audioEngineHint())}</p>
+      </div>`;
+  }
+
+  function studyListenText(m) {
+    if (!m) return '';
+    const study = m.study || {};
+    const bits = [
+      `Module ${m.number != null ? m.number : m.id}: ${m.title || ''}`,
+      m.summary || '',
+      m.rainpoleJob ? `Rainpole job this module: ${m.rainpoleJob}` : '',
+      m.requirementsSpine ? `Requirements spine: ${m.requirementsSpine}` : '',
+      study.primer ? `Primer: ${study.primer}` : '',
+      ...((study.highlights || []).map((h, i) => `Watch for ${i + 1}: ${h.title}. ${h.text}`))
+    ];
+    return bits.filter(Boolean).join('. ').replace(/\s+/g, ' ').trim();
+  }
+
+  let pendingModuleAudio = false;
 
   function markSectionAudioHeard(sectionId) {
     if (!course || !sectionId) return;
@@ -354,8 +417,25 @@
     };
   }
 
+  function currentStudyAudioMeta() {
+    const { section, param } = parseHash();
+    if (section !== 'study' || !param) return null;
+    const m = DataLoader.getModule(param);
+    if (!m) return null;
+    return {
+      text: studyListenText(m),
+      meta: {
+        id: `study:${m.id}`,
+        title: m.title,
+        moduleTitle: m.title,
+        moduleId: m.id
+      },
+      module: m
+    };
+  }
+
   async function preloadCurrentSection(opts) {
-    const ctx = currentSectionAudioMeta();
+    const ctx = currentSectionAudioMeta() || currentStudyAudioMeta();
     if (!ctx || !window.AITrainer || !AITrainer.preload) return;
     if (!AITrainer.isTtsReady || !AITrainer.isTtsReady()) return;
     if (AITrainer.isSpeaking && AITrainer.isSpeaking()) return;
@@ -443,7 +523,9 @@
             advanceAudioPlaylist();
           } else {
             setListenUi(false);
-            if (course) renderCourse(course.moduleId);
+            const { section: endSection, param: endParam } = parseHash();
+            if (endSection === 'course' && course) renderCourse(course.moduleId);
+            else if (endSection === 'study' && endParam) renderModule(endParam);
           }
         }
       });
@@ -453,7 +535,9 @@
       if (result && result.engine === 'aborted') setListenUi(false);
       else if (!(AITrainer.isSpeaking && AITrainer.isSpeaking())) {
         setListenUi(false);
-        if (course && meta && meta.id) renderCourse(course.moduleId);
+        const { section: doneSection, param: doneParam } = parseHash();
+        if (doneSection === 'course' && course && meta && meta.id) renderCourse(course.moduleId);
+        else if (doneSection === 'study' && doneParam) renderModule(doneParam);
       }
     } catch (err) {
       if (statusTimer) { clearInterval(statusTimer); statusTimer = null; }
@@ -819,6 +903,8 @@
       <a class="backlink" href="#study">← All modules</a>
       ${pageHead(`Module ${m.number} · Study clip`, m.title, m.summary)}
 
+      ${audioBarHtml('study')}
+
       ${m.rainpoleJob ? `
         <aside class="rainpole-callout" role="note">
           <h4>Rainpole job this module</h4>
@@ -874,6 +960,8 @@
           : ''}
         <a class="btn" href="#quiz/${encodeURIComponent(m.id)}">Skip to Quiz</a>
       </div>`;
+
+    setListenUi(!!(window.AITrainer && AITrainer.isSpeaking && AITrainer.isSpeaking()));
   }
 
   function renderCourse(modId) {
@@ -952,21 +1040,7 @@
         ${heard ? '<span class="pill is-ok">Audio heard</span>' : (escort && ttsReady ? '<span class="pill is-warn">Audio pending</span>' : '')}
       </p>
 
-      <div class="section-audio-bar" role="group" aria-label="Section audio controls">
-        <div class="audio-controls">
-          <button type="button" class="btn btn-sm btn-primary" data-action="section-listen" aria-pressed="false" title="Play this section with OpenAI voice">▶ Play section</button>
-          <button type="button" class="btn btn-sm" data-action="audio-stop" disabled title="Stop voice">■ Stop</button>
-          <button type="button" class="btn btn-sm" data-action="audio-preload" ${ttsReady ? '' : 'disabled'} title="Download voice now so Play has no lag">⬇ Preload</button>
-          <button type="button" class="btn btn-sm" data-action="module-listen" aria-pressed="false" title="Play every section in this module">▶▶ Play module</button>
-        </div>
-        <span class="audio-loader" id="audioLoader" hidden aria-hidden="true"></span>
-        <p class="hint" id="audioLiveStatus">Idle — use Preload for no lag, then Play section.</p>
-        <label class="ai-toggle audio-escort-toggle">
-          <input type="checkbox" id="audioEscortToggle" data-action="audio-escort" ${escort ? 'checked' : ''}>
-          <span>Hold Next until this section’s audio finishes</span>
-        </label>
-        <p class="hint">${esc(audioEngineHint())}</p>
-      </div>
+      ${audioBarHtml('course')}
 
       <article class="course-stage">
         <h3 class="course-section-title">${esc(section.title)}</h3>
@@ -992,6 +1066,10 @@
 
     scheduleSectionPreload();
     setListenUi(!!(window.AITrainer && AITrainer.isSpeaking && AITrainer.isSpeaking()));
+    if (pendingModuleAudio) {
+      pendingModuleAudio = false;
+      Promise.resolve().then(() => playModuleAudio());
+    }
   }
 
   function renderRainpoleCallouts(section) {
@@ -2483,9 +2561,9 @@
     document.body.classList.toggle('is-landing', section === 'home' || section === '');
     document.body.classList.toggle('is-course', section === 'course');
     if (listenToggle) {
-      const onCourse = section === 'course';
-      listenToggle.hidden = onCourse;
-      listenToggle.style.display = onCourse ? 'none' : '';
+      const hideTop = section === 'course' || (section === 'study' && !!param);
+      listenToggle.hidden = hideTop;
+      listenToggle.style.display = hideTop ? 'none' : '';
     }
 
     setActiveNav(section === '' ? 'home' : section);
@@ -2599,6 +2677,17 @@
           break;
         }
         audioPlaylist = null;
+        const { section: routeSection, param: routeParam } = parseHash();
+        if (routeSection === 'study' && routeParam) {
+          const mStudy = DataLoader.getModule(routeParam);
+          startListen(studyListenText(mStudy), {
+            id: mStudy && `study:${mStudy.id}`,
+            title: mStudy && mStudy.title,
+            moduleTitle: mStudy && mStudy.title,
+            moduleId: mStudy && mStudy.id
+          });
+          break;
+        }
         const mListen = course && DataLoader.getModule(course.moduleId);
         const sListen = mListen && mListen.course && mListen.course.sections[course.index];
         const text = sectionListenText(sListen, mListen && mListen.title);
@@ -2610,12 +2699,28 @@
         });
         break;
       }
-      case 'module-listen':
+      case 'module-listen': {
+        const { section: routeSection, param: routeParam } = parseHash();
+        if (routeSection === 'study' && routeParam) {
+          const mGo = DataLoader.getModule(routeParam);
+          if (!mGo || !mGo.course || !mGo.course.sections.length) {
+            window.alert('This module has no Course presentation to play yet.');
+            break;
+          }
+          pendingModuleAudio = true;
+          location.hash = `#course/${encodeURIComponent(routeParam)}`;
+          break;
+        }
         playModuleAudio();
         break;
+      }
       case 'audio-stop':
         stopPageAudio();
-        if (course) renderCourse(course.moduleId);
+        {
+          const { section: stopSection, param: stopParam } = parseHash();
+          if (stopSection === 'course' && course) renderCourse(course.moduleId);
+          else if (stopSection === 'study' && stopParam) renderModule(stopParam);
+        }
         break;
       case 'audio-preload':
         preloadCurrentSection({ quiet: false });
