@@ -854,6 +854,7 @@
               ${seen ? '<a class="btn btn-lg" href="#howto">Revisit HowTo</a>' : ''}
             </div>
           </div>
+          <p class="landing-credit">John Miller — Associate Director — Technical Resolution 2026</p>
         </div>
       </section>`;
   }

@@ -524,6 +524,19 @@ body.is-landing .view > * { max-width: none; }
 .landing-actions .btn-primary {
   box-shadow: 0 10px 28px rgba(15, 118, 110, .35);
 }
+.landing-credit {
+  position: absolute;
+  z-index: 1;
+  left: clamp(1rem, 3vw, 1.75rem);
+  bottom: clamp(.85rem, 2.5vw, 1.35rem);
+  margin: 0;
+  max-width: calc(100% - 2rem);
+  font-size: .78rem;
+  font-weight: 500;
+  letter-spacing: .01em;
+  line-height: 1.35;
+  color: rgba(226, 232, 240, .72);
+}
 
 @media (max-width: 720px) {
   .landing-art { object-position: 55% center; }
@@ -534,6 +547,10 @@ body.is-landing .view > * { max-width: none; }
   .landing-veil {
     background:
       radial-gradient(ellipse 90% 70% at 50% 42%, rgba(8, 14, 28, .85) 0%, rgba(8, 14, 28, .55) 60%, rgba(8, 14, 28, .35) 100%);
+  }
+  .landing-credit {
+    font-size: .72rem;
+    color: rgba(226, 232, 240, .78);
   }
 }
 
