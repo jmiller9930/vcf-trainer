@@ -269,39 +269,123 @@ window.AITrainer = (function () {
     return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 400);
   }
 
+  async function probeOpenAiTts(provider, signal) {
+    const base = String(provider.baseUrl || '').replace(/\/+$/, '');
+    const url = `${base}/audio/speech`;
+    const model = provider.ttsModel || DEFAULT_TTS_MODEL;
+    const voice = provider.ttsVoice || DEFAULT_TTS_VOICE;
+    const body = {
+      model: model === 'tts-1' ? 'tts-1' : model,
+      voice,
+      input: 'OK'
+    };
+    if (body.model !== 'tts-1') body.instructions = 'Speak clearly and briefly.';
+
+    const res = await fetch(url, {
+      method: 'POST',
+      signal,
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${provider.apiKey}`
+      },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => res.statusText);
+      throw new Error(errText || res.statusText);
+    }
+    const buf = await res.arrayBuffer();
+    if (!buf || !buf.byteLength) throw new Error('Empty audio response');
+    return {
+      model: body.model,
+      voice,
+      bytes: buf.byteLength
+    };
+  }
+
   async function testConnection(cfg) {
     const c = cfg || loadConfig();
-    const providers = activeProviders(c);
-    if (!providers.length) {
-      return { ok: false, results: [], message: 'Enable AI Trainer and add at least one API key (DeepSeek for coach; OpenAI for TTS).' };
-    }
     const results = [];
-    for (const p of providers) {
+    const deepseek = deepseekProvider(c);
+    const openai = openaiProvider(c);
+
+    if (!deepseek && !openai) {
+      return {
+        ok: false,
+        results: [],
+        message: 'No keys ready. DeepSeek = AI Trainer (optional). OpenAI = TTS (optional). Course works without either.'
+      };
+    }
+
+    if (deepseek) {
       try {
-        const text = await chatCompletions(p, [
+        const text = await chatCompletions(deepseek, [
           { role: 'system', content: 'Reply with exactly: OK' },
-          { role: 'user', content: 'Connection test for VCF-9 AI Trainer.' }
+          { role: 'user', content: 'Connection test for VCF-9 AI Trainer (DeepSeek coach).' }
         ]);
-        results.push({ provider: p.id, label: p.label, ok: true, detail: text.slice(0, 120) });
+        results.push({
+          provider: 'deepseek',
+          label: 'DeepSeek (AI Trainer)',
+          ok: true,
+          detail: text.slice(0, 120)
+        });
       } catch (err) {
-        results.push({ provider: p.id, label: p.label, ok: false, detail: err.message || String(err) });
+        results.push({
+          provider: 'deepseek',
+          label: 'DeepSeek (AI Trainer)',
+          ok: false,
+          detail: err.message || String(err)
+        });
       }
     }
-    const openai = openaiProvider(c);
+
     if (openai) {
+      try {
+        const probe = await probeOpenAiTts(openai);
+        results.push({
+          provider: 'openai-tts',
+          label: 'OpenAI (TTS)',
+          ok: true,
+          detail: `TTS OK — voice ${probe.voice} / model ${probe.model} (${probe.bytes} bytes). Southern/Texas style ready.`
+        });
+      } catch (err) {
+        const msg = err.message || String(err);
+        const hint = /NetworkError|Failed to fetch|Load failed|CORS/i.test(msg)
+          ? ' Browser could not reach OpenAI (network/CORS/ad-block). DeepSeek coach still works; Listen may fall back to device voice.'
+          : '';
+        results.push({
+          provider: 'openai-tts',
+          label: 'OpenAI (TTS)',
+          ok: false,
+          detail: msg + hint
+        });
+      }
+    }
+
+    /* Do not chat-test OpenAI — it is TTS-only in this app. */
+
+    if (
+      deepseek && openai &&
+      keyFingerprint(deepseek.apiKey) === keyFingerprint(openai.apiKey) &&
+      String(deepseek.apiKey).trim() === String(openai.apiKey).trim()
+    ) {
       results.push({
-        provider: 'openai-tts',
-        label: 'OpenAI TTS',
-        ok: true,
-        detail: `Configured voice ${openai.ttsVoice || DEFAULT_TTS_VOICE} / model ${openai.ttsModel || DEFAULT_TTS_MODEL} (Southern/Texas style). Chat test above verifies the key.`
+        provider: 'warn',
+        label: 'Key check',
+        ok: false,
+        detail: 'DeepSeek and OpenAI appear to be the same key. Use each provider’s own key.'
       });
     }
-    const ok = results.some(r => r.ok && r.provider !== 'openai-tts') || results.some(r => r.ok);
-    return {
-      ok: results.some(r => r.ok && r.provider !== 'openai-tts'),
-      results,
-      message: ok ? 'At least one chat provider responded. OpenAI key is used for Southern/Texas TTS.' : 'No provider responded successfully.'
-    };
+
+    const coachOk = results.some(r => r.provider === 'deepseek' && r.ok);
+    const ttsOk = results.some(r => r.provider === 'openai-tts' && r.ok);
+    let message;
+    if (coachOk && ttsOk) message = 'Ready — DeepSeek AI Trainer OK · OpenAI TTS OK.';
+    else if (coachOk && !ttsOk) message = 'DeepSeek AI Trainer OK. OpenAI TTS failed — course still works; Listen can use device voice.';
+    else if (!coachOk && ttsOk) message = 'OpenAI TTS OK. DeepSeek AI Trainer failed — course still works; coach panel needs DeepSeek.';
+    else message = 'Neither optional provider passed. Course still works without them.';
+
+    return { ok: coachOk || ttsOk, results, message };
   }
 
   /* ---------------------------------------------------------------- script cache */
