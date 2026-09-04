@@ -412,6 +412,11 @@ window.AITrainer = (function () {
     if (!body) return null;
 
     if (/\bstand for\b/.test(q) || /\bmean\b/.test(q)) {
+      const ac = (typeof DataLoader !== 'undefined' && DataLoader.getAcronym)
+        ? (DataLoader.getAcronym(normalizeLookup(hit.name).split(' ')[0])
+          || DataLoader.getAcronyms().find(a => normalizeLookup(hit.name).includes(a.acronym.toLowerCase())))
+        : null;
+      if (ac) return `${ac.acronym} stands for ${ac.expansion}.`;
       const escaped = String(name).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
       const equals = String(hit.text || '').match(new RegExp(`${escaped}\\s+equals\\s+([^.]+)\\.?`, 'i'));
       if (equals) return `${name} stands for ${equals[1].trim()}.`;

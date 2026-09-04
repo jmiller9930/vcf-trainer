@@ -1,6 +1,6 @@
 /* VCF 9 Trainer — service worker: network-first for app shell so deploys win. */
 
-const CACHE_NAME = 'vcf-trainer-v19';
+const CACHE_NAME = 'vcf-trainer-v20';
 
 const CORE_ASSETS = [
   './',
@@ -14,7 +14,8 @@ const CORE_ASSETS = [
   './data/modules.json',
   './data/questions.json',
   './data/delta91.json',
-  './data/figures.json'
+  './data/figures.json',
+  './data/acronyms.json'
 ];
 
 const OPTIONAL_ASSETS = [

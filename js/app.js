@@ -533,6 +533,7 @@
           <li><strong>Advance organizer</strong> — Study clip first, then full Course.</li>
           <li><strong>What / How / Why</strong> — Broadcom-aligned component meaning, not letter memorization.</li>
           <li><strong>Every section tested</strong> — if you cannot say what a term is or what it does, that section is not done. Next stays locked until the check passes.</li>
+          <li><strong>Acronyms broken out</strong> — course text expands acronyms (RCAR, NFR, DD, …). A term MCQ (“what does X stand for?”) comes before the scenario check so you learn the label before applying it.</li>
           <li><strong>Spiral recall</strong> — later modules resurface earlier terms (e.g. vMotion) where the topic fits, so learning stacks instead of evaporating.</li>
           <li><strong>Drawing literacy</strong> — every labeled object taught, then checked.</li>
           <li><strong>Blocking knowledge checks</strong> — wrong → reinforce → retry; Next locked until correct.</li>
@@ -742,11 +743,12 @@
     }
 
     if (!course || course.moduleId !== modId) {
-      course = { moduleId: modId, index: 0, cleared: {}, figCleared: {}, spiralCleared: {}, check: null, figCheck: null, spiralCheck: null };
+      course = { moduleId: modId, index: 0, cleared: {}, figCleared: {}, spiralCleared: {}, termCleared: {}, check: null, figCheck: null, spiralCheck: null, termCheckState: null };
     }
     if (!course.cleared) course.cleared = {};
     if (!course.figCleared) course.figCleared = {};
     if (!course.spiralCleared) course.spiralCleared = {};
+    if (!course.termCleared) course.termCleared = {};
     if (course.index < 0) course.index = 0;
     if (course.index >= m.course.sections.length) course.index = m.course.sections.length - 1;
 
@@ -758,7 +760,10 @@
       .map(id => map[id])
       .filter(Boolean);
 
-    const paras = esc(section.body).split(/\n\n+/).map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
+    const expandedBody = DataLoader.expandAcronyms
+      ? DataLoader.expandAcronyms(section.body)
+      : section.body;
+    const paras = esc(expandedBody).split(/\n\n+/).map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`).join('');
 
     const callbackBlock = callbacks.length
       ? `<aside class="course-callback" role="note">
@@ -766,7 +771,7 @@
            ${callbacks.map(h => `
              <div class="callback-item">
                <strong>${esc(h.title)}</strong>
-               <p>${esc(h.text)}</p>
+               <p>${esc(DataLoader.expandAcronyms ? DataLoader.expandAcronyms(h.text) : h.text)}</p>
              </div>`).join('')}
          </aside>`
       : '';
@@ -774,7 +779,11 @@
     const figure = section.figureId ? DataLoader.getFigure(section.figureId) : null;
     const figureHtml = figure ? renderFigureBlock(section, figure) : '';
     const evidenceHtml = renderRainpoleCallouts(section);
-    const checkBlockHtml = figure ? renderFigureChecks(section, figure) : renderTextKnowledgeCheck(section);
+    const termCheckHtml = renderTermKnowledgeCheck(section);
+    const termDone = !section.termCheck || !!(course.termCleared && course.termCleared[section.id]);
+    const checkBlockHtml = !termDone
+      ? ''
+      : (figure ? renderFigureChecks(section, figure) : renderTextKnowledgeCheck(section));
     const spiralHtml = primaryCheckCleared(section) ? renderSpiralRecall(modId, section) : '';
 
     const blocked = !sectionCheckCleared(section);
@@ -802,6 +811,7 @@
         <div class="course-body">${paras}</div>
         ${evidenceHtml}
         ${figureHtml}
+        ${termCheckHtml}
         ${checkBlockHtml}
         ${spiralHtml}
       </article>
@@ -815,7 +825,7 @@
               : `<a class="btn btn-primary" href="#quiz/${encodeURIComponent(m.id)}">Done — Quiz</a>`)
           : `<button type="button" class="btn btn-primary" data-action="course-next" ${nextDisabled}>Next section</button>`}
       </div>
-      <p class="hint course-hint">Every section tests what/how. Later modules add spiral recall of earlier terms. Wrong → reinforce → retry; Next stays locked until correct.</p>`;
+      <p class="hint course-hint">Acronyms are expanded in the text. Term checks (what does X stand for?) come before scenario checks. Later modules add spiral recall. Wrong → reinforce → retry; Next stays locked until correct.</p>`;
   }
 
   function renderRainpoleCallouts(section) {
@@ -951,6 +961,60 @@
       </section>`;
   }
 
+  function renderTermKnowledgeCheck(section) {
+    const kc = section && section.termCheck;
+    if (!kc) return '';
+    if (!course.termCleared) course.termCleared = {};
+    const cleared = !!course.termCleared[section.id];
+    const checkState = (course.termCheckState && course.termCheckState.sectionId === section.id)
+      ? course.termCheckState : null;
+
+    const opts = kc.options.map((opt, i) => {
+      let klass = 'option kc-option';
+      let mark = '';
+      if (cleared || (checkState && checkState.chosen === kc.answer)) {
+        if (i === kc.answer) { klass += ' is-correct'; mark = '✓'; }
+        else if (checkState && checkState.chosen === i) { klass += ' is-wrong'; mark = '✕'; }
+      } else if (checkState && checkState.chosen === i) {
+        klass += ' is-wrong'; mark = '✕';
+      }
+      return `
+        <button type="button" class="${klass}" data-action="course-term" data-index="${i}"
+          ${cleared || checkState ? 'disabled' : ''}>
+          <span class="option-key">${letter(i)}</span>
+          <span class="option-text">${esc(opt)}</span>
+          ${mark ? `<span class="option-mark">${mark}</span>` : ''}
+        </button>`;
+    }).join('');
+
+    let feedback = '';
+    if (cleared || (checkState && checkState.chosen === kc.answer)) {
+      feedback = `
+        <div class="kc-feedback is-ok">
+          <h4>Term locked — ${esc(kc.acronym)} expanded</h4>
+          <p>${esc(kc.explanation || `${kc.acronym} = ${kc.expansion}`)}</p>
+        </div>`;
+    } else if (checkState && checkState.chosen !== kc.answer) {
+      feedback = `
+        <div class="kc-feedback is-bad">
+          <h4>Break the acronym out, then retry</h4>
+          <p class="kc-reinforce">${esc(kc.reinforce || `Remember: ${kc.acronym} = ${kc.expansion}`)}</p>
+          <button type="button" class="btn btn-sm btn-primary" data-action="course-term-retry">Try again</button>
+        </div>`;
+    }
+
+    return `
+      <section class="kc-block kc-term" aria-label="Term check">
+        <div class="kc-head">
+          <span class="kc-badge">Term check · ${esc(kc.acronym)}</span>
+          <span class="kc-note">${cleared ? 'Passed — scenario check unlocked' : 'Spell it out before the scenario check'}</span>
+        </div>
+        <p class="kc-stem">${esc(kc.stem)}</p>
+        <div class="options kc-options">${opts}</div>
+        ${feedback}
+      </section>`;
+  }
+
   function renderTextKnowledgeCheck(section) {
     const kc = section.knowledgeCheck;
     if (!kc) return '';
@@ -1021,6 +1085,9 @@
 
   function primaryCheckCleared(section) {
     if (!course || !section) return true;
+    if (section.termCheck) {
+      if (!course.termCleared || !course.termCleared[section.id]) return false;
+    }
     if (section.figureId) {
       const figure = DataLoader.getFigure(section.figureId);
       if (figure && figure.checks && figure.checks.length) {
@@ -1114,6 +1181,38 @@
       </section>`;
   }
 
+  function answerTermCheck(index) {
+    if (!course) return;
+    const m = DataLoader.getModule(course.moduleId);
+    if (!m) return;
+    const section = m.course.sections[course.index];
+    const kc = section && section.termCheck;
+    if (!kc || (course.termCleared && course.termCleared[section.id])) return;
+    if (course.termCheckState && course.termCheckState.sectionId === section.id) return;
+    course.termCheckState = { sectionId: section.id, chosen: index };
+    if (index === kc.answer) {
+      if (!course.termCleared) course.termCleared = {};
+      course.termCleared[section.id] = true;
+      try {
+        const raw = localStorage.getItem('vcf9.introducedTerms');
+        const map = raw ? JSON.parse(raw) : {};
+        const bucket = map[course.moduleId] || [];
+        (kc.terms || [kc.acronym]).forEach(t => {
+          if (t && !bucket.includes(t)) bucket.push(t);
+        });
+        map[course.moduleId] = bucket;
+        localStorage.setItem('vcf9.introducedTerms', JSON.stringify(map));
+      } catch (err) { /* ignore */ }
+    }
+    renderCourse(course.moduleId);
+  }
+
+  function retryTermCheck() {
+    if (!course) return;
+    course.termCheckState = null;
+    renderCourse(course.moduleId);
+  }
+
   function answerCourseCheck(index) {
     if (!course) return;
     const m = DataLoader.getModule(course.moduleId);
@@ -1121,6 +1220,7 @@
     const section = m.course.sections[course.index];
     const kc = section && section.knowledgeCheck;
     if (!kc || course.cleared[section.id]) return;
+    if (section.termCheck && !(course.termCleared && course.termCleared[section.id])) return;
     if (course.check && course.check.sectionId === section.id) return;
     if (isMultiItem(kc)) {
       toggleCourseOption(index);
@@ -2296,6 +2396,12 @@
         break;
       case 'course-check':
         answerCourseCheck(index);
+        break;
+      case 'course-term':
+        answerTermCheck(index);
+        break;
+      case 'course-term-retry':
+        retryTermCheck();
         break;
       case 'course-toggle':
         toggleCourseOption(index);

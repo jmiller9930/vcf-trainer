@@ -1,0 +1,440 @@
+{
+  "version": 1,
+  "note": "Acronyms must be shown with expansion. Each entry can inject an in-module term MCQ on matching Course sections.",
+  "items": [
+    {
+      "id": "rcar",
+      "acronym": "RCAR",
+      "expansion": "Requirements, Constraints, Assumptions, Risks",
+      "meaning": "Classification method for every customer statement in the conceptual model.",
+      "teachTitles": ["RCAR Framework", "The Conceptual Model"],
+      "terms": ["RCAR"],
+      "options": [
+        "Requirements, Constraints, Assumptions, Risks",
+        "Recoverability, Capacity, Availability, Redundancy",
+        "Requirements, Compliance, Architecture, Resilience",
+        "Runtime, Capacity, Availability, Recoverability"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "amprs",
+      "acronym": "AMPRS",
+      "expansion": "Availability, Manageability, Performance, Recoverability, Security",
+      "meaning": "Quality lens applied to NFRs and to design-decision trade-offs.",
+      "teachTitles": ["AMPRS Quality Lens", "AMPRS: Cross-Cutting Quality Evaluation"],
+      "terms": ["AMPRS"],
+      "options": [
+        "Availability, Manageability, Performance, Recoverability, Security",
+        "Availability, Migration, Performance, Replication, Storage",
+        "Automation, Manageability, Patching, Recoverability, Security",
+        "Assumptions, Manageability, Performance, Risks, Security"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "nfr",
+      "acronym": "NFR",
+      "expansion": "Non-Functional Requirement",
+      "meaning": "How well the solution must perform — a measurable quality target.",
+      "teachTitles": ["Functional and Non-Functional Requirements"],
+      "terms": ["NFR", "Non-Functional Requirement"],
+      "options": [
+        "Non-Functional Requirement — how well the solution must do something (measurable quality)",
+        "Network Fabric Requirement — underlay bandwidth only",
+        "New Feature Request — a product wishlist item",
+        "Named Failure Record — an incident ticket ID"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "fr",
+      "acronym": "FR",
+      "expansion": "Functional Requirement",
+      "meaning": "What the solution must do — a capability that exists or does not.",
+      "teachTitles": [],
+      "matchBody": "\\bFR\\b|functional requirement",
+      "terms": ["FR", "Functional Requirement"],
+      "options": [
+        "Functional Requirement — what the solution must do (a capability)",
+        "Failure Recovery — the backup plan only",
+        "Fabric Router — a spine switch role",
+        "Fleet Record — an inventory spreadsheet row"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "dd",
+      "acronym": "DD",
+      "expansion": "Design Decision",
+      "meaning": "A recorded choice with rationale, rejected alternative, AMPRS impact, and RCAR traceability.",
+      "teachTitles": [],
+      "matchBody": "\\bdesign decision\\b|\\bDD-\\d+",
+      "terms": ["Design Decision", "DD"],
+      "options": [
+        "Design Decision — a recorded choice with rationale, rejected alternative, AMPRS impact, and traceability",
+        "Data Domain — a backup appliance brand only",
+        "Deployment Directive — an Installer checkbox",
+        "Domain Driver — a workload placement rule"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "ftt",
+      "acronym": "FTT",
+      "expansion": "Failures To Tolerate",
+      "meaning": "vSAN policy setting for how many simultaneous failures a object can survive.",
+      "teachTitles": ["Storage Policy and Failures To Tolerate (FTT)"],
+      "terms": ["FTT", "Failures To Tolerate"],
+      "options": [
+        "Failures To Tolerate",
+        "Full Throughput Target",
+        "Fabric Transit Tunnel",
+        "File Tier Threshold"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "rto",
+      "acronym": "RTO",
+      "expansion": "Recovery Time Objective",
+      "meaning": "Maximum acceptable time to restore service after an outage.",
+      "teachTitles": ["RTO and RPO"],
+      "terms": ["RTO", "Recovery Time Objective"],
+      "options": [
+        "Recovery Time Objective — how long restore may take",
+        "Runtime Throughput Objective — peak IOPS target",
+        "Redundant Tor Overlay — a switch design",
+        "Required Tenant Owner — a naming field"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "rpo",
+      "acronym": "RPO",
+      "expansion": "Recovery Point Objective",
+      "meaning": "Maximum acceptable data loss measured in time (how stale a restore may be).",
+      "teachTitles": ["RTO and RPO"],
+      "terms": ["RPO", "Recovery Point Objective"],
+      "options": [
+        "Recovery Point Objective — how much data loss (in time) is acceptable",
+        "Replication Path Only — a network route type",
+        "ReadyNode Placement Order — a BOM rule",
+        "Runtime Performance Objective — a latency SLA"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "esa",
+      "acronym": "ESA",
+      "expansion": "Express Storage Architecture",
+      "meaning": "Modern single-tier vSAN architecture using NVMe-class devices.",
+      "teachTitles": ["vSAN Express Storage Architecture (ESA)", "vSAN ESA"],
+      "matchTitle": "\\bESA\\b|Express Storage Architecture",
+      "terms": ["ESA", "Express Storage Architecture"],
+      "options": [
+        "Express Storage Architecture",
+        "Enterprise SAN Array",
+        "Edge Service Adapter",
+        "Extended Snapshot Archive"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "osa",
+      "acronym": "OSA",
+      "expansion": "Original Storage Architecture",
+      "meaning": "Legacy hybrid/all-flash vSAN disk-group model retained mainly for existing estates.",
+      "teachTitles": ["vSAN Original Storage Architecture (OSA)", "vSAN OSA"],
+      "matchTitle": "\\bOSA\\b|Original Storage Architecture",
+      "terms": ["OSA", "Original Storage Architecture"],
+      "options": [
+        "Original Storage Architecture",
+        "Overlay Segment Adapter",
+        "Operations Service Agent",
+        "Object Snapshot Archive"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "spbm",
+      "acronym": "SPBM",
+      "expansion": "Storage Policy Based Management",
+      "meaning": "Policy-driven storage services applied per VM or disk rather than per LUN.",
+      "teachTitles": ["Storage Policy Based Management (SPBM)"],
+      "terms": ["SPBM", "Storage Policy Based Management"],
+      "options": [
+        "Storage Policy Based Management",
+        "Single Path Block Mirror",
+        "Supervisor Pod Backup Module",
+        "Site Pairing Bandwidth Meter"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "vds",
+      "acronym": "VDS",
+      "expansion": "vSphere Distributed Switch",
+      "meaning": "Centralized virtual switch configuration across hosts in a cluster/domain.",
+      "teachTitles": ["vSphere Distributed Switch (VDS)"],
+      "terms": ["VDS", "vSphere Distributed Switch"],
+      "options": [
+        "vSphere Distributed Switch",
+        "Virtual Domain Segment",
+        "vSAN Data Service",
+        "VLAN Discovery Scanner"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "sddc",
+      "acronym": "SDDC",
+      "expansion": "Software-Defined Data Center",
+      "meaning": "Data center model where compute, storage, and networking are virtualized and API-driven; SDDC Manager is the VCF lifecycle control plane.",
+      "teachTitles": ["SDDC Manager"],
+      "terms": ["SDDC", "SDDC Manager", "Software-Defined Data Center"],
+      "options": [
+        "Software-Defined Data Center",
+        "Secure Distributed Domain Controller",
+        "Storage Disk Data Cache",
+        "Site Disaster Deployment Center"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "spof",
+      "acronym": "SPOF",
+      "expansion": "Single Point of Failure",
+      "meaning": "One component whose failure takes down the service — architects design to remove or mitigate SPOFs.",
+      "teachTitles": ["High Availability Appliance Mode"],
+      "matchBody": "\\bSPOF\\b|single point of failure",
+      "terms": ["SPOF", "Single Point of Failure"],
+      "options": [
+        "Single Point of Failure",
+        "Secure Platform Overlay Fabric",
+        "Supervisor Pod Orchestration Framework",
+        "Storage Policy Object Filter"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "vi",
+      "acronym": "VI",
+      "expansion": "Virtual Infrastructure",
+      "meaning": "In VCF, a VI workload domain is the lifecycle boundary where consumer workloads run.",
+      "teachTitles": ["The Workload Domain"],
+      "matchBody": "\\bVI workload\\b",
+      "terms": ["VI", "Virtual Infrastructure", "VI workload domain"],
+      "options": [
+        "Virtual Infrastructure (as in VI workload domain)",
+        "Vlan Isolation",
+        "vSAN Instance",
+        "Vendor Installer"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "tep",
+      "acronym": "TEP",
+      "expansion": "Tunnel Endpoint",
+      "meaning": "Host/edge endpoint for Geneve overlay traffic; TEP-to-TEP MTU must be proven.",
+      "teachTitles": ["VMkernel Networks"],
+      "matchBody": "\\bTEP\\b|Tunnel Endpoint",
+      "terms": ["TEP", "Tunnel Endpoint"],
+      "options": [
+        "Tunnel Endpoint",
+        "Transport Edge Proxy",
+        "Tenant Endpoint Profile",
+        "Topology Evaluation Plan"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "mtu",
+      "acronym": "MTU",
+      "expansion": "Maximum Transmission Unit",
+      "meaning": "Largest packet size; overlay designs need end-to-end jumbo (often 1600+/9000) proven TEP-to-TEP.",
+      "teachTitles": [],
+      "matchBody": "\\bMTU\\b",
+      "terms": ["MTU", "Maximum Transmission Unit"],
+      "options": [
+        "Maximum Transmission Unit",
+        "Management Traffic Uplink",
+        "Multi-Tier Underlay",
+        "Migration Transfer Utility"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "hcx",
+      "acronym": "HCX",
+      "expansion": "Hybrid Cloud Extension",
+      "meaning": "VCF Operations HCX migration platform (cold, bulk, vMotion, RAV methods).",
+      "teachTitles": [],
+      "matchTitle": "\\bHCX\\b|Migration",
+      "matchBody": "\\bHCX\\b",
+      "terms": ["HCX", "Hybrid Cloud Extension"],
+      "options": [
+        "Hybrid Cloud Extension (VCF Operations HCX)",
+        "Host Cluster Xen",
+        "High Capacity Xfer",
+        "Hypervisor Control Exchange"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "rav",
+      "acronym": "RAV",
+      "expansion": "Replication Assisted vMotion",
+      "meaning": "HCX method combining replication with switchover for large, low-downtime moves.",
+      "teachTitles": ["Replication Assisted vMotion (RAV)"],
+      "terms": ["RAV", "Replication Assisted vMotion"],
+      "options": [
+        "Replication Assisted vMotion",
+        "Remote Availability Vault",
+        "Rack Affinity Validator",
+        "Recoverability Assessment Value"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "vks",
+      "acronym": "VKS",
+      "expansion": "vSphere Kubernetes Service",
+      "meaning": "Supervisor service that delivers Tanzu/Kubernetes clusters to consumers.",
+      "teachTitles": ["vSphere Kubernetes Service (VKS)"],
+      "terms": ["VKS", "vSphere Kubernetes Service"],
+      "options": [
+        "vSphere Kubernetes Service",
+        "Virtual Kernel Switch",
+        "VCF Key Store",
+        "vSAN Knowledge Service"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "vpc",
+      "acronym": "VPC",
+      "expansion": "Virtual Private Cloud",
+      "meaning": "NSX network model giving self-service isolated networking to tenants/projects.",
+      "teachTitles": [],
+      "matchBody": "\\bVPC\\b|Virtual Private Cloud",
+      "terms": ["VPC", "Virtual Private Cloud"],
+      "options": [
+        "Virtual Private Cloud",
+        "vSphere Protection Cluster",
+        "VLAN Port Channel",
+        "Vendor Patch Catalog"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "vmca",
+      "acronym": "VMCA",
+      "expansion": "VMware Certificate Authority",
+      "meaning": "Built-in certificate authority for vSphere/VCF components (vs external enterprise CA).",
+      "teachTitles": ["VMCA and External Certificate Authority"],
+      "terms": ["VMCA", "VMware Certificate Authority"],
+      "options": [
+        "VMware Certificate Authority",
+        "Virtual Machine Cluster Affinity",
+        "vSAN Metadata Cache Agent",
+        "VCF Migration Control API"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "sso",
+      "acronym": "SSO",
+      "expansion": "Single Sign-On",
+      "meaning": "One authentication experience across VCF components in the fleet.",
+      "teachTitles": ["VCF Identity Broker"],
+      "matchBody": "\\bsingle sign-on\\b|\\bSSO\\b",
+      "terms": ["SSO", "Single Sign-On"],
+      "options": [
+        "Single Sign-On",
+        "Secure Storage Overlay",
+        "Supervisor Service Object",
+        "Site Sync Operation"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "drs",
+      "acronym": "DRS",
+      "expansion": "Distributed Resource Scheduler",
+      "meaning": "vSphere load-balancing and placement engine (often with VM/host groups).",
+      "teachTitles": ["DRS VM and Host Groups"],
+      "terms": ["DRS", "Distributed Resource Scheduler"],
+      "options": [
+        "Distributed Resource Scheduler",
+        "Disaster Recovery Site",
+        "Domain Routing Service",
+        "Disk Replica Snapshot"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "vcf",
+      "acronym": "VCF",
+      "expansion": "VMware Cloud Foundation",
+      "meaning": "Broadcom/VMware private-cloud stack this course designs.",
+      "teachTitles": [],
+      "matchTitle": "^Overview$|VCF ",
+      "terms": ["VCF", "VMware Cloud Foundation"],
+      "injectOnOverviewOnly": true,
+      "options": [
+        "VMware Cloud Foundation",
+        "Virtual Cluster Fabric",
+        "vSphere Configuration Framework",
+        "Vendor Certified Fleet"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "nsx",
+      "acronym": "NSX",
+      "expansion": "VMware NSX (network and security virtualization)",
+      "meaning": "Overlay networking, security, and edge services platform in VCF.",
+      "teachTitles": ["NSX", "NSX Edge Cluster"],
+      "terms": ["NSX"],
+      "options": [
+        "VMware NSX — network and security virtualization for the overlay",
+        "Network Storage eXchange — a SAN protocol",
+        "Node State eXtension — a host agent",
+        "NSX means “new switch x” only — it is not a product"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "kpi",
+      "acronym": "KPI",
+      "expansion": "Key Performance Indicator",
+      "meaning": "A measurable operations signal used to prove the platform meets design intent.",
+      "teachTitles": ["Key Performance Indicators"],
+      "terms": ["KPI", "Key Performance Indicator"],
+      "options": [
+        "Key Performance Indicator",
+        "Kernel Patch Index",
+        "Kubernetes Pod Inventory",
+        "Keep-alive Probe Interval"
+      ],
+      "answer": 0
+    },
+    {
+      "id": "ha",
+      "acronym": "HA",
+      "expansion": "High Availability",
+      "meaning": "Design to keep service running through component failure (distinct from backup/restore).",
+      "teachTitles": ["High Availability Appliance Mode"],
+      "terms": ["HA", "High Availability"],
+      "options": [
+        "High Availability — keep service running through failure",
+        "Host Affinity — a DRS rule only",
+        "Hardware Archive — a backup target",
+        "Hypervisor Audit — a compliance scan"
+      ],
+      "answer": 0
+    }
+  ]
+}

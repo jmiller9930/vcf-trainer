@@ -158,11 +158,13 @@ function mainStaticChecks() {
   ok('config labels DeepSeek AI Trainer and OpenAI TTS', appAi.includes('DeepSeek — AI Trainer') && appAi.includes('OpenAI — TTS voice only'));
   ok('quorum removed from AI config UI', !appAi.includes('id="aiQuorum"'));
   ok('SW network-first for app shell', fs.readFileSync(path.join(root, 'sw.js'), 'utf8').includes('network-first') || fs.readFileSync(path.join(root, 'sw.js'), 'utf8').includes('isAppShell'));
-  ok('index cache-busts build', /VCF_BUILD\s*=\s*['"]1[0-9]['"]/.test(fs.readFileSync(path.join(root, 'index.html'), 'utf8')));
+  ok('index cache-busts build', /VCF_BUILD\s*=\s*['"]\d+['"]/.test(fs.readFileSync(path.join(root, 'index.html'), 'utf8')));
   ok('HowTo states AI/TTS optional', appAi.includes('Recommended, not required') && appAi.includes('howto-ai-save'));
   ok('coach stays short and keeps chat history', aiSrc.includes('Do NOT end with quizzes') && aiSrc.includes('historyMessages') && appAi.includes('history: aiChat.slice'));
   ok('coach answers locally before AI', aiSrc.includes('answerLocally') && aiSrc.includes("mode: 'local'") && aiSrc.includes('no API tokens used'));
   ok('DeepSeek balance probe wired', aiSrc.includes('fetchDeepSeekBalance') && aiSrc.includes('/user/balance') && fs.readFileSync(path.join(root,'js/app.js'),'utf8').includes('ai-balance'));
+  ok('acronym bank + term checks', fs.existsSync(path.join(root, 'data/acronyms.json')) && fs.readFileSync(path.join(root, 'js/data-loader.js'), 'utf8').includes('attachTermChecks') && appAi.includes('course-term') && appAi.includes('expandAcronyms'));
+  ok('SW caches acronyms.json', fs.readFileSync(path.join(root, 'sw.js'), 'utf8').includes('acronyms.json'));
 }
 
 async function mainHttpChecks() {
@@ -189,6 +191,7 @@ async function mainHttpChecks() {
       '/data/modules.json',
       '/data/figures.json',
       '/data/questions.json',
+      '/data/acronyms.json',
       '/assets/landing-hero-cloud-automation.jpg',
       '/data/figures/fig-dc-topology.png'
     ];

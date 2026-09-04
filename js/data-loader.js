@@ -21,10 +21,11 @@ window.DataLoader = (function () {
     modules:   'data/modules.json',
     questions: 'data/questions.json',
     delta:     'data/delta91.json',
-    figures:   'data/figures.json'
+    figures:   'data/figures.json',
+    acronyms:  'data/acronyms.json'
   };
 
-  const cache = { modules: [], questions: [], delta: [], figures: [] };
+  const cache = { modules: [], questions: [], delta: [], figures: [], acronyms: [] };
   const errors = [];
   let loadPromise = null;
 
@@ -356,21 +357,24 @@ window.DataLoader = (function () {
     const bank = [];
     cache.modules.forEach((mod, mi) => {
       ((mod.course && mod.course.sections) || []).forEach(s => {
-        const kc = s.knowledgeCheck;
-        if (!kc || !kc.terms || !kc.terms.length) return;
-        if (kc.informational91) return;
-        bank.push({
-          id: `spiral:${s.id}`,
-          sourceSectionId: s.id,
-          moduleId: mod.id,
-          moduleOrder: mi,
-          terms: kc.terms.slice(),
-          stem: kc.stem,
-          options: kc.options.slice(),
-          answer: kc.answer,
-          explanation: kc.explanation || `Recall from earlier Course: ${kc.terms.join(', ')}.`,
-          reinforce: kc.reinforce || 'Re-open the earlier Course section that introduced this term.'
-        });
+        const pushKc = (kc, prefix) => {
+          if (!kc || !kc.terms || !kc.terms.length) return;
+          if (kc.informational91) return;
+          bank.push({
+            id: `${prefix}:${s.id}:${kc.acronym || kc.terms[0] || 'term'}`,
+            sourceSectionId: s.id,
+            moduleId: mod.id,
+            moduleOrder: mi,
+            terms: kc.terms.slice(),
+            stem: kc.stem,
+            options: kc.options.slice(),
+            answer: kc.answer,
+            explanation: kc.explanation || `Recall from earlier Course: ${kc.terms.join(', ')}.`,
+            reinforce: kc.reinforce || 'Re-open the earlier Course section that introduced this term.'
+          });
+        };
+        pushKc(s.termCheck, 'spiral-term');
+        pushKc(s.knowledgeCheck, 'spiral');
       });
     });
     return bank;
@@ -425,11 +429,12 @@ window.DataLoader = (function () {
     if (loadPromise) return loadPromise;
 
     loadPromise = (async () => {
-      const [modulesRes, questionsRes, deltaRes, figuresRes] = await Promise.all([
+      const [modulesRes, questionsRes, deltaRes, figuresRes, acronymsRes] = await Promise.all([
         fetchJson(SOURCES.modules).catch(e => ({ __error: e })),
         fetchJson(SOURCES.questions).catch(e => ({ __error: e })),
         fetchJson(SOURCES.delta).catch(e => ({ __error: e })),
-        fetchJson(SOURCES.figures).catch(e => ({ __error: e }))
+        fetchJson(SOURCES.figures).catch(e => ({ __error: e })),
+        fetchJson(SOURCES.acronyms).catch(e => ({ __error: e }))
       ]);
 
       if (modulesRes && modulesRes.__error) {
@@ -461,6 +466,16 @@ window.DataLoader = (function () {
           .filter(f => f.id && f.image);
       }
 
+      if (acronymsRes && acronymsRes.__error) {
+        errors.push(`Could not load ${SOURCES.acronyms} (${acronymsRes.__error.message})`);
+        cache.acronyms = [];
+      } else {
+        cache.acronyms = normaliseAcronyms(acronymsRes);
+      }
+
+      attachTermChecks(cache.modules, cache.acronyms);
+      cleanSpiralTerms(cache.modules);
+
       /* Questions whose moduleId does not resolve are still usable, but they
          should not disappear from module-filtered views without a trace. */
       const known = new Set(cache.modules.map(m => m.id));
@@ -483,11 +498,191 @@ window.DataLoader = (function () {
         questions: cache.questions,
         delta: cache.delta,
         figures: cache.figures,
+        acronyms: cache.acronyms,
         errors
       };
     })();
 
     return loadPromise;
+  }
+
+  /* ----------------------------------------------------------- acronyms / terms */
+
+  function normaliseAcronyms(payload) {
+    const items = Array.isArray(payload)
+      ? payload
+      : (payload && Array.isArray(payload.items) ? payload.items : []);
+    return items.map((raw, i) => {
+      const acronym = str(raw.acronym || raw.id).toUpperCase();
+      const options = arr(raw.options).map(o => typeof o === 'string' ? o.trim() : str(o)).filter(Boolean);
+      let answer = Number(raw.answer);
+      if (!Number.isInteger(answer) || answer < 0 || answer >= options.length) answer = 0;
+      return {
+        id: str(raw.id) || `acro${i + 1}`,
+        acronym,
+        expansion: str(raw.expansion),
+        meaning: str(raw.meaning),
+        teachTitles: arr(raw.teachTitles).map(str).filter(Boolean),
+        matchTitle: str(raw.matchTitle),
+        matchBody: str(raw.matchBody),
+        terms: arr(raw.terms).map(str).filter(Boolean),
+        injectOnOverviewOnly: !!raw.injectOnOverviewOnly,
+        options,
+        answer
+      };
+    }).filter(a => a.acronym && a.expansion && a.options.length >= 2);
+  }
+
+  function buildTermCheck(item) {
+    const label = item.acronym;
+    return {
+      id: item.id,
+      acronym: item.acronym,
+      expansion: item.expansion,
+      stem: `What does ${label} stand for in this VCF architect course?`,
+      options: item.options.slice(),
+      answer: item.answer,
+      answers: [item.answer],
+      multiSelect: false,
+      explanation: `${label} stands for ${item.expansion}. ${item.meaning || ''}`.trim(),
+      reinforce: `Break the acronym out every time until it is automatic: ${label} = ${item.expansion}.`,
+      terms: (item.terms && item.terms.length) ? item.terms.slice() : [item.acronym],
+      spiral: true,
+      isTermCheck: true
+    };
+  }
+
+  function scoreAcronymForSection(item, section) {
+    const title = str(section.title);
+    const body = str(section.body);
+    const id = str(section.id);
+    let score = 0;
+
+    if (item.teachTitles.some(t => t.toLowerCase() === title.toLowerCase())) score = Math.max(score, 100);
+    if (item.teachTitles.some(t => title.toLowerCase().includes(t.toLowerCase()))) score = Math.max(score, 92);
+
+    if (item.matchTitle) {
+      try {
+        if (new RegExp(item.matchTitle, 'i').test(title)) score = Math.max(score, 85);
+      } catch (err) { /* bad regex */ }
+    }
+
+    if (item.acronym.length >= 2) {
+      const acRe = new RegExp(`\\b${item.acronym.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\b`, 'i');
+      if (acRe.test(title)) score = Math.max(score, 75);
+    }
+
+    if (item.id === 'dd' && (/-dd\d+/i.test(id) || /^DD[- ]?\d+/i.test(title) || /design decision/i.test(title))) {
+      score = Math.max(score, 90);
+    }
+
+    if (item.injectOnOverviewOnly) {
+      if (/overview/i.test(title) || /-s-overview$/i.test(id)) score = Math.max(score, 70);
+      else score = Math.min(score, 40);
+    }
+
+    if (item.matchBody && score < 80) {
+      try {
+        if (new RegExp(item.matchBody, 'i').test(body)) score = Math.max(score, 55);
+      } catch (err) { /* ignore */ }
+    }
+
+    /* Prefer teaching sections that already have a text KC */
+    if (section.knowledgeCheck && score >= 55) score += 5;
+    /* Avoid figure-only sections unless title strongly matches */
+    if (section.figureId && !section.knowledgeCheck && score < 90) score = 0;
+
+    return score;
+  }
+
+  function stemAlreadyTeachesAcronym(kc, item) {
+    if (!kc || !kc.stem) return false;
+    const s = kc.stem.toLowerCase();
+    const ac = item.acronym.toLowerCase();
+    return (
+      (s.includes('stand for') || s.includes('acronym') || s.includes('stands for'))
+      && s.includes(ac)
+    ) || (kc.options || []).some(o => String(o).includes(item.expansion));
+  }
+
+  function attachTermChecks(modules, acronyms) {
+    if (!acronyms || !acronyms.length) return;
+    modules.forEach(m => {
+      const sections = (m.course && m.course.sections) || [];
+      sections.forEach(section => {
+        let best = null;
+        acronyms.forEach(item => {
+          const score = scoreAcronymForSection(item, section);
+          if (score >= 70 && (!best || score > best.score)) {
+            best = { item, score };
+          }
+        });
+        if (!best) return;
+        if (stemAlreadyTeachesAcronym(section.knowledgeCheck, best.item)) {
+          /* Ensure short spiral terms on the existing KC */
+          const kc = section.knowledgeCheck;
+          const want = best.item.terms && best.item.terms.length ? best.item.terms : [best.item.acronym];
+          const merged = [...new Set([...(kc.terms || []), ...want])];
+          kc.terms = merged.filter(t => t && !/\?$/.test(t) && t.length < 60);
+          return;
+        }
+        section.termCheck = buildTermCheck(best.item);
+        if (section.knowledgeCheck) {
+          const kc = section.knowledgeCheck;
+          const want = best.item.terms && best.item.terms.length ? best.item.terms : [best.item.acronym];
+          const merged = [...new Set([...(kc.terms || []), ...want])];
+          kc.terms = merged.filter(t => t && !/\?$/.test(t) && t.length < 60);
+        }
+      });
+    });
+  }
+
+  function cleanSpiralTerms(modules) {
+    modules.forEach(m => {
+      ((m.course && m.course.sections) || []).forEach(section => {
+        const kc = section.knowledgeCheck;
+        if (!kc || !kc.terms) return;
+        kc.terms = kc.terms
+          .map(str)
+          .filter(t => t && t.length < 48 && !/\?$/.test(t) && !/^Should /i.test(t) && !/^Which /i.test(t) && !/^How /i.test(t) && !/^What /i.test(t));
+        if (section.termCheck && section.termCheck.terms) {
+          kc.terms = [...new Set([...(kc.terms || []), ...section.termCheck.terms])];
+        }
+      });
+    });
+  }
+
+  /**
+   * Expand bare acronyms on first use: RCAR → RCAR (Requirements, …).
+   * Skips tokens already followed by a parenthetical expansion.
+   */
+  function expandAcronyms(text, opts) {
+    let out = String(text || '');
+    if (!out || !cache.acronyms.length) return out;
+    const all = !!(opts && opts.all);
+    const seen = new Set();
+    const sorted = cache.acronyms.slice().sort((a, b) => b.acronym.length - a.acronym.length);
+    sorted.forEach(item => {
+      const ac = item.acronym;
+      const escAc = ac.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      if (new RegExp(`${escAc}\\s*\\(`, 'i').test(out) && !all) {
+        /* already expanded somewhere — still expand first bare if wanted */
+      }
+      const re = new RegExp(`\\b(${escAc})\\b(?!\\s*\\()`, all ? 'gi' : 'i');
+      out = out.replace(re, (match) => {
+        const key = match.toUpperCase();
+        if (!all && seen.has(key)) return match;
+        seen.add(key);
+        return `${match} (${item.expansion})`;
+      });
+    });
+    return out;
+  }
+
+  function getAcronyms() { return cache.acronyms; }
+  function getAcronym(idOrAcronym) {
+    const key = String(idOrAcronym || '').toLowerCase();
+    return cache.acronyms.find(a => a.id === key || a.acronym.toLowerCase() === key) || null;
   }
 
   /* --------------------------------------------------------------- accessors */
@@ -531,6 +726,9 @@ window.DataLoader = (function () {
     getSpiralBank,
     pickSpiralRecall,
     getModuleOrder,
+    getAcronyms,
+    getAcronym,
+    expandAcronyms,
     getErrors
   };
 })();
