@@ -485,7 +485,7 @@
         <h3>Optional before you start — AI Trainer + TTS</h3>
         <p><strong>Recommended, not required.</strong> Study, Course, Quiz, Exam, drawings, and blocking checks all work with <em>zero</em> API keys. You can configure later under <a href="#ai">AI Trainer</a>.</p>
         <ul class="howto-list">
-          <li><strong>DeepSeek = AI Trainer</strong> (optional) — coach Q&amp;A + spoken lesson <em>scripts</em>.</li>
+          <li><strong>DeepSeek = AI Trainer</strong> (optional) — coach Q&amp;A + spoken lesson <em>scripts</em>. Coach answers from local course facts first; API tokens only when local lookup is unclear.</li>
           <li><strong>OpenAI = TTS</strong> (optional) — Southern / Texas instructor voice for Listen / Play module.</li>
           <li><strong>Without keys</strong> — full course path still works; Listen uses the device voice; no coach panel.</li>
         </ul>
@@ -1294,11 +1294,17 @@
           <label class="field-label">API key<input type="password" id="aiDeepSeekKey" autocomplete="off" spellcheck="false" value="" placeholder="${dsSaved ? 'Leave blank to keep saved key' : 'sk-…'}"></label>
           <label class="field-label">Chat model<input type="text" id="aiDeepSeekModel" value="${esc(cfg.deepseek.model)}"></label>
           <label class="field-label">Base URL<input type="text" id="aiDeepSeekBase" value="${esc(cfg.deepseek.baseUrl)}"></label>
+          <div class="ai-balance" id="aiDeepSeekBalanceBox">
+            <p class="hint ai-balance-line" id="aiDeepSeekBalance">${dsSaved ? 'Balance: checking…' : 'Balance: save a DeepSeek key to see remaining credit.'}</p>
+            <p class="hint">DeepSeek API shows <em>remaining</em> balance (total / topped-up / granted) — not lifetime spent.</p>
+            <button type="button" class="btn btn-sm" data-action="ai-balance" ${dsSaved ? '' : 'disabled'}>Refresh DeepSeek balance</button>
+          </div>
         </div>
 
         <div class="ai-provider ai-role-tts">
           <h4>OpenAI — TTS voice only (Southern / Texas)</h4>
           <p class="hint">Voice only. Not the AI Trainer coach.${oaiSaved ? ` <strong>Key saved</strong> (${esc(oaiFp)}).` : ''}</p>
+          <p class="hint">If OpenAI credit runs out (or TTS fails), Listen automatically falls back to the <strong>device voice</strong> — the course does not break. OpenAI has no balance API for normal keys; check billing in the OpenAI dashboard.</p>
           <label class="ai-toggle"><input type="checkbox" id="aiOpenAiOn" ${cfg.openai.enabled ? 'checked' : ''}> Use OpenAI for TTS</label>
           <label class="field-label">API key<input type="password" id="aiOpenAiKey" autocomplete="off" spellcheck="false" value="" placeholder="${oaiSaved ? 'Leave blank to keep saved key' : 'sk-…'}"></label>
           <label class="field-label">TTS model<input type="text" id="aiOpenAiTtsModel" value="${esc(cfg.openai.ttsModel || 'gpt-4o-mini-tts')}" placeholder="gpt-4o-mini-tts"></label>
@@ -1322,6 +1328,47 @@
         <h3>Privacy</h3>
         <p class="hint">Keys stay in <code>localStorage</code> on this device. Coach/scripts → DeepSeek. Audio → OpenAI TTS. Progress reset does not clear keys.</p>
       </section>`;
+    if (dsSaved) {
+      Promise.resolve().then(() => refreshDeepSeekBalanceUi());
+    }
+  }
+
+  function paintDeepSeekBalance(bal, errMsg) {
+    const el = document.getElementById('aiDeepSeekBalance');
+    if (!el || !window.AITrainer) return;
+    if (errMsg) {
+      el.textContent = `Balance: could not load — ${errMsg}`;
+      el.classList.remove('is-ok');
+      el.classList.add('is-bad');
+      return;
+    }
+    if (!bal) {
+      el.textContent = 'Balance: save a DeepSeek key to see remaining credit.';
+      el.classList.remove('is-ok', 'is-bad');
+      return;
+    }
+    const line = AITrainer.formatDeepSeekBalance(bal);
+    el.textContent = `Balance: ${line}`;
+    el.classList.toggle('is-ok', !!bal.isAvailable);
+    el.classList.toggle('is-bad', !bal.isAvailable);
+  }
+
+  async function refreshDeepSeekBalanceUi() {
+    const el = document.getElementById('aiDeepSeekBalance');
+    if (!el || !window.AITrainer || !AITrainer.fetchDeepSeekBalance) return;
+    const cfg = AITrainer.loadConfig();
+    if (!AITrainer.hasKey(cfg.deepseek)) {
+      paintDeepSeekBalance(null);
+      return;
+    }
+    el.textContent = 'Balance: checking…';
+    el.classList.remove('is-ok', 'is-bad');
+    try {
+      const bal = await AITrainer.fetchDeepSeekBalance(cfg);
+      paintDeepSeekBalance(bal);
+    } catch (err) {
+      paintDeepSeekBalance(null, err.message || String(err));
+    }
   }
 
   function readAIForm() {
@@ -1389,6 +1436,8 @@
           `<li class="${r.ok ? 'is-ok' : 'is-bad'}"><strong>${esc(r.label)}</strong>: ${esc(r.detail)}</li>`
         ).join('')}</ul>`;
     }
+    if (result.balance) paintDeepSeekBalance(result.balance);
+    else refreshDeepSeekBalanceUi();
   }
 
   /* ====================================================================== */
@@ -1479,7 +1528,7 @@
     const send = document.getElementById('aiCoachSend');
     if (send) send.disabled = true;
     try {
-      const result = await AITrainer.ask(q, buildAiContext());
+      const result = await AITrainer.ask(q, buildAiContext(), { history: aiChat.slice(0, -1) });
       result.answers.forEach(a => {
         aiChat.push({
           role: 'assistant',
@@ -2303,6 +2352,9 @@
         break;
       case 'ai-test':
         testAIFromForm();
+        break;
+      case 'ai-balance':
+        refreshDeepSeekBalanceUi();
         break;
       case 'ai-clear':
         if (window.confirm('Clear saved AI Trainer keys and disable the coach on this device?')) {

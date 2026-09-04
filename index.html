@@ -21,7 +21,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css?v=16">
+<link rel="stylesheet" href="css/style.css?v=19">
 </head>
 
 <body>
@@ -101,19 +101,19 @@
       <textarea id="aiCoachInput" rows="2" placeholder="Ask about this section or drawing…"></textarea>
       <button type="submit" class="btn btn-primary btn-sm" id="aiCoachSend">Ask</button>
     </form>
-    <p class="hint ai-coach-hint">DeepSeek coach only — Course checks stay local. OpenAI is TTS voice, not the coach.</p>
+    <p class="hint ai-coach-hint">Local course facts first (no tokens). AI only if unclear. Prefix with “ask ai:” to force DeepSeek. OpenAI is TTS only.</p>
   </div>
 </aside>
 
-<script>window.VCF_BUILD = '16';</script>
-<script src="js/data-loader.js?v=16"></script>
-<script src="js/quiz-engine.js?v=16"></script>
-<script src="js/ai-trainer.js?v=16"></script>
-<script src="js/app.js?v=16"></script>
+<script>window.VCF_BUILD = '19';</script>
+<script src="js/data-loader.js?v=19"></script>
+<script src="js/quiz-engine.js?v=19"></script>
+<script src="js/ai-trainer.js?v=19"></script>
+<script src="js/app.js?v=19"></script>
 
 <script>
 (function () {
-  var BUILD = window.VCF_BUILD || '16';
+  var BUILD = window.VCF_BUILD || '19';
   var RELOAD_KEY = 'vcf9.swReload:' + BUILD;
 
   function registerSw() {

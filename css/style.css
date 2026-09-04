@@ -1621,6 +1621,16 @@ table.data td.num { font-variant-numeric: tabular-nums; }
   border-top: 1px solid var(--border);
 }
 .ai-provider h4 { margin: 0 0 .35rem; }
+.ai-balance {
+  margin-top: .75rem;
+  padding: .65rem .75rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-sunken);
+  border: 1px solid var(--border);
+}
+.ai-balance .ai-balance-line { margin: 0 0 .35rem; font-weight: 600; }
+.ai-balance .ai-balance-line.is-ok { color: var(--ok); }
+.ai-balance .ai-balance-line.is-bad { color: var(--bad); }
 .ai-test-out {
   margin-top: .85rem;
   padding: .75rem .85rem;
