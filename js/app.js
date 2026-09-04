@@ -274,22 +274,28 @@
     const status = document.getElementById('audioLiveStatus');
     const loader = document.getElementById('audioLoader');
     if (startBtn) {
-      startBtn.textContent = busy && phase === 'playing' ? 'Playing…' : (busy ? 'Loading…' : 'Start');
+      startBtn.textContent = busy && phase === 'playing' ? '▶ Playing…' : (busy ? '⏳ Loading…' : '▶ Play section');
       startBtn.disabled = !!busy;
       startBtn.setAttribute('aria-pressed', busy ? 'true' : 'false');
     }
-    if (stopBtn) stopBtn.disabled = !busy;
-    if (preloadBtn) preloadBtn.disabled = !!busy || !(window.AITrainer && AITrainer.isTtsReady && AITrainer.isTtsReady());
-    if (loader) loader.hidden = !(phase === 'preparing' || (busy && phase !== 'playing'));
+    if (stopBtn) {
+      stopBtn.disabled = !busy;
+      stopBtn.textContent = '■ Stop';
+    }
+    if (preloadBtn) {
+      preloadBtn.disabled = !!busy || !(window.AITrainer && AITrainer.isTtsReady && AITrainer.isTtsReady());
+      preloadBtn.textContent = phase === 'preparing' && !busy ? '⬇ Caching…' : '⬇ Preload';
+    }
+    if (loader) loader.hidden = !(phase === 'preparing');
     if (status) {
-      if (phase === 'preparing') status.textContent = 'Loading OpenAI voice… (preloading). Press Stop to cancel.';
-      else if (phase === 'playing') status.textContent = 'Playing OpenAI voice. Next is locked until this finishes (audio escort).';
-      else if (phase === 'ready') status.textContent = 'Ready — voice cached. Press Start for instant play.';
-      else status.textContent = 'Idle — preload for no lag, then Start.';
+      if (phase === 'preparing') status.textContent = 'Loading OpenAI voice… Press ■ Stop to cancel.';
+      else if (phase === 'playing') status.textContent = 'Playing OpenAI voice. Next locked until finish (if escort on).';
+      else if (phase === 'ready') status.textContent = 'Ready — voice cached. Press ▶ Play section.';
+      else status.textContent = 'Four controls: Play section · Stop · Preload · Play module.';
     }
     const modBtn = document.querySelector('[data-action="module-listen"]');
     if (modBtn) {
-      modBtn.textContent = audioPlaylist && busy ? 'Playing module…' : 'Play module';
+      modBtn.textContent = audioPlaylist && busy ? '▶▶ Playing module…' : '▶▶ Play module';
       modBtn.setAttribute('aria-pressed', audioPlaylist && busy ? 'true' : 'false');
     }
     const nextBtn = document.querySelector('[data-action="course-next"]');
@@ -941,13 +947,15 @@
         ${heard ? '<span class="pill is-ok">Audio heard</span>' : (escort && ttsReady ? '<span class="pill is-warn">Audio pending</span>' : '')}
       </p>
 
-      <div class="section-audio-bar">
-        <button type="button" class="btn btn-sm btn-primary" data-action="section-listen" aria-pressed="false">Start</button>
-        <button type="button" class="btn btn-sm" data-action="audio-stop" disabled>Stop</button>
-        <button type="button" class="btn btn-sm" data-action="audio-preload" ${ttsReady ? '' : 'disabled'}>Preload</button>
-        <button type="button" class="btn btn-sm" data-action="module-listen" aria-pressed="false">Play module</button>
+      <div class="section-audio-bar" role="group" aria-label="Section audio controls">
+        <div class="audio-controls">
+          <button type="button" class="btn btn-sm btn-primary" data-action="section-listen" aria-pressed="false" title="Play this section with OpenAI voice">▶ Play section</button>
+          <button type="button" class="btn btn-sm" data-action="audio-stop" disabled title="Stop voice">■ Stop</button>
+          <button type="button" class="btn btn-sm" data-action="audio-preload" ${ttsReady ? '' : 'disabled'} title="Download voice now so Play has no lag">⬇ Preload</button>
+          <button type="button" class="btn btn-sm" data-action="module-listen" aria-pressed="false" title="Play every section in this module">▶▶ Play module</button>
+        </div>
         <span class="audio-loader" id="audioLoader" hidden aria-hidden="true"></span>
-        <p class="hint" id="audioLiveStatus">Idle — preload for no lag, then Start.</p>
+        <p class="hint" id="audioLiveStatus">Idle — use Preload for no lag, then Play section.</p>
         <label class="ai-toggle audio-escort-toggle">
           <input type="checkbox" id="audioEscortToggle" data-action="audio-escort" ${escort ? 'checked' : ''}>
           <span>Hold Next until this section’s audio finishes</span>
