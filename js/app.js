@@ -241,25 +241,44 @@
 
   function setListenUi(playing) {
     if (!listenToggle) return;
-    listenToggle.classList.toggle('is-playing', !!playing);
-    listenToggle.setAttribute('aria-pressed', playing ? 'true' : 'false');
-    listenToggle.setAttribute('aria-label', playing ? 'Stop listening' : 'Listen to this page');
-    listenToggle.title = playing ? 'Stop' : 'Listen to this page';
-    listenToggle.textContent = playing ? '■' : '▶';
+    const phase = window.AITrainer && AITrainer.getAudioPhase ? AITrainer.getAudioPhase() : (playing ? 'playing' : 'idle');
+    const busy = !!playing || phase === 'preparing';
+    listenToggle.classList.toggle('is-playing', busy);
+    listenToggle.setAttribute('aria-pressed', busy ? 'true' : 'false');
+    listenToggle.setAttribute('aria-label', busy ? 'Stop listening' : 'Start listening');
+    listenToggle.title = busy ? 'Stop' : 'Start listening';
+    listenToggle.textContent = busy ? '■' : '▶';
+    syncCourseAudioBar(busy, phase);
+  }
+
+  function syncCourseAudioBar(busy, phase) {
+    const startBtn = document.querySelector('[data-action="section-listen"]');
+    const stopBtn = document.querySelector('[data-action="audio-stop"]');
+    const status = document.getElementById('audioLiveStatus');
+    if (startBtn) {
+      startBtn.textContent = busy ? 'Start (busy…)' : 'Start';
+      startBtn.disabled = !!busy;
+      startBtn.setAttribute('aria-pressed', busy ? 'true' : 'false');
+    }
+    if (stopBtn) stopBtn.disabled = !busy;
+    if (status) {
+      if (!busy || phase === 'idle') status.textContent = 'Idle — press Start for this section.';
+      else if (phase === 'preparing') status.textContent = 'Preparing… (script / OpenAI voice). Press Stop to cancel.';
+      else if (phase === 'playing-openai') status.textContent = 'Playing OpenAI voice (Southern/Texas).';
+      else if (phase === 'playing-browser') status.textContent = 'Playing device voice.';
+      else status.textContent = 'Playing…';
+    }
+    const modBtn = document.querySelector('[data-action="module-listen"]');
+    if (modBtn) {
+      modBtn.textContent = audioPlaylist && busy ? 'Playing module…' : 'Play module';
+      modBtn.setAttribute('aria-pressed', audioPlaylist && busy ? 'true' : 'false');
+    }
   }
 
   function stopPageAudio() {
     audioPlaylist = null;
-    if (window.AITrainer) AITrainer.stopSpeech();
+    if (window.AITrainer) AITrainer.stopSpeech({ silent: true });
     setListenUi(false);
-    document.querySelectorAll('[data-action="section-listen"]').forEach(btn => {
-      btn.textContent = 'Listen to section';
-      btn.setAttribute('aria-pressed', 'false');
-    });
-    document.querySelectorAll('[data-action="module-listen"]').forEach(btn => {
-      btn.textContent = 'Play module';
-      btn.setAttribute('aria-pressed', 'false');
-    });
   }
 
   function pageListenText() {
@@ -292,14 +311,25 @@
       return;
     }
     const wasPlaylist = audioPlaylist;
+    /* Always kill prior engine first — never stack robot + OpenAI */
     if (!wasPlaylist) stopPageAudio();
     else if (window.AITrainer) AITrainer.stopSpeech({ silent: true });
     setListenUi(true);
+    let statusTimer = setInterval(() => {
+      if (!(AITrainer.isSpeaking && AITrainer.isSpeaking())) {
+        clearInterval(statusTimer);
+        statusTimer = null;
+        return;
+      }
+      setListenUi(true);
+    }, 400);
     try {
       const useLesson = !!(meta && AITrainer.speakLesson);
+      let result;
       if (useLesson) {
-        await AITrainer.speakLesson(payload, meta, {
+        result = await AITrainer.speakLesson(payload, meta, {
           onEnd: () => {
+            if (statusTimer) { clearInterval(statusTimer); statusTimer = null; }
             if (audioPlaylist && audioPlaylist.moduleId === (meta && meta.moduleId)) {
               advanceAudioPlaylist();
             } else {
@@ -308,19 +338,29 @@
           }
         });
       } else {
-        await AITrainer.speakText(payload, {
+        result = await AITrainer.speakText(payload, {
           onEnd: () => {
+            if (statusTimer) { clearInterval(statusTimer); statusTimer = null; }
             if (audioPlaylist) advanceAudioPlaylist();
             else setListenUi(false);
           }
         });
       }
+      if (result && result.engine === 'aborted') {
+        setListenUi(false);
+      } else if (!(AITrainer.isSpeaking && AITrainer.isSpeaking())) {
+        /* Playback finished without onEnd in some abort paths */
+        setListenUi(!!(AITrainer.isSpeaking && AITrainer.isSpeaking()));
+      }
     } catch (err) {
+      if (statusTimer) { clearInterval(statusTimer); statusTimer = null; }
       setListenUi(false);
       audioPlaylist = null;
       if (!(err && (err.name === 'AbortError' || /abort/i.test(err.message || '')))) {
         window.alert(err.message || 'Could not start audio.');
       }
+    } finally {
+      if (statusTimer) clearInterval(statusTimer);
     }
   }
 
@@ -799,9 +839,10 @@
       </div>
 
       <div class="section-audio-bar">
-        <button type="button" class="btn btn-sm" data-action="section-listen" aria-pressed="false">Listen to section</button>
+        <button type="button" class="btn btn-sm btn-primary" data-action="section-listen" aria-pressed="false">Start</button>
+        <button type="button" class="btn btn-sm" data-action="audio-stop" disabled>Stop</button>
         <button type="button" class="btn btn-sm" data-action="module-listen" aria-pressed="false">Play module</button>
-        <button type="button" class="btn btn-sm" data-action="audio-stop">Stop</button>
+        <p class="hint" id="audioLiveStatus">Idle — press Start for this section.</p>
         <p class="hint">${esc(audioEngineHint())}</p>
       </div>
 
@@ -1404,7 +1445,7 @@
         <div class="ai-provider ai-role-tts">
           <h4>OpenAI — TTS voice only (Southern / Texas)</h4>
           <p class="hint">Voice only. Not the AI Trainer coach.${oaiSaved ? ` <strong>Key saved</strong> (${esc(oaiFp)}).` : ''}</p>
-          <p class="hint">If OpenAI credit runs out (or TTS fails), Listen automatically falls back to the <strong>device voice</strong> — the course does not break. OpenAI has no balance API for normal keys; check billing in the OpenAI dashboard.</p>
+          <p class="hint">If OpenAI is enabled, Listen uses <strong>only</strong> OpenAI voice (no automatic device-voice fallback — that caused robot/AI overlap). Use Start / Stop on the Course audio bar. Check billing in the OpenAI dashboard if voice fails.</p>
           <label class="ai-toggle"><input type="checkbox" id="aiOpenAiOn" ${cfg.openai.enabled ? 'checked' : ''}> Use OpenAI for TTS</label>
           <label class="field-label">API key<input type="password" id="aiOpenAiKey" autocomplete="off" spellcheck="false" value="" placeholder="${oaiSaved ? 'Leave blank to keep saved key' : 'sk-…'}"></label>
           <label class="field-label">TTS model<input type="text" id="aiOpenAiTtsModel" value="${esc(cfg.openai.ttsModel || 'gpt-4o-mini-tts')}" placeholder="gpt-4o-mini-tts"></label>
@@ -2419,7 +2460,7 @@
         retrySpiralCheck();
         break;
       case 'section-listen': {
-        if (window.AITrainer && AITrainer.isSpeaking && AITrainer.isSpeaking() && !audioPlaylist) {
+        if (window.AITrainer && AITrainer.isSpeaking && AITrainer.isSpeaking()) {
           stopPageAudio();
           break;
         }
@@ -2432,12 +2473,6 @@
           title: sListen && sListen.title,
           moduleTitle: mListen && mListen.title,
           moduleId: mListen && mListen.id
-        }).then(() => {
-          const btn = view.querySelector('[data-action="section-listen"]');
-          if (btn && window.AITrainer && AITrainer.isSpeaking && AITrainer.isSpeaking()) {
-            btn.textContent = 'Stop audio';
-            btn.setAttribute('aria-pressed', 'true');
-          }
         });
         break;
       }

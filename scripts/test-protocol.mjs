@@ -165,6 +165,7 @@ function mainStaticChecks() {
   ok('DeepSeek balance probe wired', aiSrc.includes('fetchDeepSeekBalance') && aiSrc.includes('/user/balance') && fs.readFileSync(path.join(root,'js/app.js'),'utf8').includes('ai-balance'));
   ok('acronym bank + term checks', fs.existsSync(path.join(root, 'data/acronyms.json')) && fs.readFileSync(path.join(root, 'js/data-loader.js'), 'utf8').includes('attachTermChecks') && appAi.includes('course-term') && appAi.includes('expandAcronyms'));
   ok('SW caches acronyms.json', fs.readFileSync(path.join(root, 'sw.js'), 'utf8').includes('acronyms.json'));
+  ok('audio start/stop exclusive', aiSrc.includes('getAudioPhase') && aiSrc.includes('listenGen') && fs.readFileSync(path.join(root,'js/app.js'),'utf8').includes('audioLiveStatus'));
 }
 
 async function mainHttpChecks() {

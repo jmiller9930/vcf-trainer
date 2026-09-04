@@ -871,10 +871,14 @@ window.AITrainer = (function () {
   let audioUrl = null;
   let speakAbort = null;
   let speaking = false;
+  let preparing = false;
+  let listenGen = 0;
   let onSpeakEnd = null;
+  let audioPhase = 'idle'; /* idle | preparing | playing-openai | playing-browser */
 
   function stopSpeech(opts) {
     const silent = !!(opts && opts.silent);
+    listenGen += 1; /* invalidate any in-flight prepare/play */
     if (speakAbort) {
       try { speakAbort.abort(); } catch (err) { /* ignore */ }
       speakAbort = null;
@@ -883,15 +887,22 @@ window.AITrainer = (function () {
       try { window.speechSynthesis.cancel(); } catch (err) { /* ignore */ }
     }
     if (audioEl) {
-      try { audioEl.pause(); } catch (err) { /* ignore */ }
+      try {
+        audioEl.onended = null;
+        audioEl.onerror = null;
+        audioEl.pause();
+        audioEl.src = '';
+      } catch (err) { /* ignore */ }
       audioEl = null;
     }
     if (audioUrl) {
       try { URL.revokeObjectURL(audioUrl); } catch (err) { /* ignore */ }
       audioUrl = null;
     }
-    const was = speaking;
+    const was = speaking || preparing;
     speaking = false;
+    preparing = false;
+    audioPhase = 'idle';
     if (was && !silent && typeof onSpeakEnd === 'function') {
       const cb = onSpeakEnd;
       onSpeakEnd = null;
@@ -901,24 +912,43 @@ window.AITrainer = (function () {
     }
   }
 
-  function isSpeaking() { return speaking; }
+  function isSpeaking() { return speaking || preparing; }
 
-  function speakBrowser(text) {
+  function getAudioPhase() { return audioPhase; }
+
+  function speakBrowser(text, gen) {
     return new Promise((resolve, reject) => {
+      if (gen != null && gen !== listenGen) {
+        resolve({ engine: 'aborted' });
+        return;
+      }
       if (!window.speechSynthesis || typeof SpeechSynthesisUtterance === 'undefined') {
         reject(new Error('Browser speech is not available on this device.'));
         return;
       }
-      window.speechSynthesis.cancel();
+      try { window.speechSynthesis.cancel(); } catch (err) { /* ignore */ }
       const u = new SpeechSynthesisUtterance(text);
       u.rate = 0.95;
-      u.onend = () => resolve({ engine: 'browser' });
-      u.onerror = (ev) => reject(new Error((ev && ev.error) || 'Speech failed'));
+      u.onend = () => {
+        if (gen != null && gen !== listenGen) {
+          resolve({ engine: 'aborted' });
+          return;
+        }
+        resolve({ engine: 'browser' });
+      };
+      u.onerror = (ev) => {
+        if (gen != null && gen !== listenGen) {
+          resolve({ engine: 'aborted' });
+          return;
+        }
+        reject(new Error((ev && ev.error) || 'Speech failed'));
+      };
+      audioPhase = 'playing-browser';
       window.speechSynthesis.speak(u);
     });
   }
 
-  async function speakOpenAI(provider, text, signal) {
+  async function speakOpenAI(provider, text, signal, gen) {
     const base = String(provider.baseUrl || '').replace(/\/+$/, '');
     const url = `${base}/audio/speech`;
     const voice = provider.ttsVoice || DEFAULT_TTS_VOICE;
@@ -928,6 +958,7 @@ window.AITrainer = (function () {
 
     let lastErr = null;
     for (const model of models) {
+      if (gen != null && gen !== listenGen) return { engine: 'aborted' };
       const body = {
         model,
         voice,
@@ -950,17 +981,36 @@ window.AITrainer = (function () {
           lastErr = new Error(`OpenAI TTS (${model}): ${errText || res.statusText}`);
           continue;
         }
+        if (gen != null && gen !== listenGen) return { engine: 'aborted' };
+
+        /* Never let device voice bleed under OpenAI playback */
+        if (typeof window !== 'undefined' && window.speechSynthesis) {
+          try { window.speechSynthesis.cancel(); } catch (err) { /* ignore */ }
+        }
+
         const blob = await res.blob();
+        if (gen != null && gen !== listenGen) return { engine: 'aborted' };
+
+        if (audioUrl) {
+          try { URL.revokeObjectURL(audioUrl); } catch (err) { /* ignore */ }
+        }
+        if (audioEl) {
+          try { audioEl.pause(); audioEl.src = ''; } catch (err) { /* ignore */ }
+        }
+
         audioUrl = URL.createObjectURL(blob);
         audioEl = new Audio(audioUrl);
+        audioPhase = 'playing-openai';
         await new Promise((resolve, reject) => {
           audioEl.onended = () => resolve();
           audioEl.onerror = () => reject(new Error('OpenAI TTS playback failed'));
           audioEl.play().catch(reject);
         });
+        if (gen != null && gen !== listenGen) return { engine: 'aborted' };
         return { engine: 'openai-tts', model, voice };
       } catch (err) {
         if (signal && signal.aborted) throw err;
+        if (gen != null && gen !== listenGen) return { engine: 'aborted' };
         lastErr = err;
       }
     }
@@ -971,27 +1021,74 @@ window.AITrainer = (function () {
     const cleaned = String(text || '').replace(/\s+/g, ' ').trim();
     if (!cleaned) throw new Error('Nothing to read.');
 
-    stopSpeech({ silent: true });
+    const resumeGen = opts && opts.gen != null;
+    const gen = resumeGen ? opts.gen : (listenGen += 1);
+    if (!resumeGen) {
+      /* Fresh play — hard stop anything prior (including robot voice). */
+      if (speakAbort) {
+        try { speakAbort.abort(); } catch (err) { /* ignore */ }
+      }
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        try { window.speechSynthesis.cancel(); } catch (err) { /* ignore */ }
+      }
+      if (audioEl) {
+        try { audioEl.pause(); audioEl.src = ''; } catch (err) { /* ignore */ }
+        audioEl = null;
+      }
+      if (audioUrl) {
+        try { URL.revokeObjectURL(audioUrl); } catch (err) { /* ignore */ }
+        audioUrl = null;
+      }
+    }
+
     speaking = true;
+    preparing = !!(opts && opts.alreadyPreparing);
     onSpeakEnd = opts && opts.onEnd;
     speakAbort = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    if (!preparing) audioPhase = 'preparing';
 
     const openai = openaiProvider();
     try {
       let result;
       if (openai) {
+        audioPhase = 'preparing';
         try {
-          result = await speakOpenAI(openai, cleaned, speakAbort && speakAbort.signal);
+          result = await speakOpenAI(openai, cleaned, speakAbort && speakAbort.signal, gen);
         } catch (err) {
           if (speakAbort && speakAbort.signal && speakAbort.signal.aborted) throw err;
-          result = await speakBrowser(cleaned);
-          result.fallbackFrom = 'openai-tts';
-          result.fallbackReason = err.message || String(err);
+          if (gen !== listenGen) return { engine: 'aborted' };
+          /*
+            OpenAI is configured — do NOT auto-fall back to device voice.
+            That caused robot + AI overlap when a retry/second path started.
+            Caller may pass allowBrowserFallback: true to opt in.
+          */
+          if (opts && opts.allowBrowserFallback) {
+            if (typeof window !== 'undefined' && window.speechSynthesis) {
+              try { window.speechSynthesis.cancel(); } catch (e2) { /* ignore */ }
+            }
+            result = await speakBrowser(cleaned, gen);
+            result.fallbackFrom = 'openai-tts';
+            result.fallbackReason = err.message || String(err);
+          } else {
+            const msg = err.message || String(err);
+            throw new Error(
+              /insufficient_quota|billing|401|Incorrect API key/i.test(msg)
+                ? `OpenAI voice failed (${msg}). Top up or fix the key — device voice was not started (avoids overlap).`
+                : `OpenAI voice failed: ${msg}`
+            );
+          }
         }
       } else {
-        result = await speakBrowser(cleaned);
+        result = await speakBrowser(cleaned, gen);
       }
+
+      if (gen !== listenGen || (result && result.engine === 'aborted')) {
+        return { engine: 'aborted' };
+      }
+
       speaking = false;
+      preparing = false;
+      audioPhase = 'idle';
       if (typeof onSpeakEnd === 'function') {
         const cb = onSpeakEnd;
         onSpeakEnd = null;
@@ -999,8 +1096,12 @@ window.AITrainer = (function () {
       }
       return result;
     } catch (err) {
-      speaking = false;
-      onSpeakEnd = null;
+      if (gen === listenGen) {
+        speaking = false;
+        preparing = false;
+        audioPhase = 'idle';
+        onSpeakEnd = null;
+      }
       throw err;
     }
   }
@@ -1015,14 +1116,55 @@ window.AITrainer = (function () {
    * meta: { id, title, moduleTitle }
    */
   async function speakLesson(sourceText, meta, opts) {
+    const gen = (listenGen += 1);
+    /* Stop any prior robot/OpenAI immediately */
+    if (speakAbort) {
+      try { speakAbort.abort(); } catch (err) { /* ignore */ }
+    }
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      try { window.speechSynthesis.cancel(); } catch (err) { /* ignore */ }
+    }
+    if (audioEl) {
+      try { audioEl.pause(); audioEl.src = ''; } catch (err) { /* ignore */ }
+      audioEl = null;
+    }
+    if (audioUrl) {
+      try { URL.revokeObjectURL(audioUrl); } catch (err) { /* ignore */ }
+      audioUrl = null;
+    }
+
+    speaking = true;
+    preparing = true;
+    audioPhase = 'preparing';
+    onSpeakEnd = opts && opts.onEnd;
     speakAbort = typeof AbortController !== 'undefined' ? new AbortController() : null;
     const signal = speakAbort.signal;
-    const transformed = await transformForSpeech(sourceText, meta || {}, signal);
-    const result = await playNarration(transformed.script, opts);
-    result.scriptEngine = transformed.engine;
-    result.cacheId = transformed.cacheId;
-    result.script = transformed.script;
-    return result;
+
+    try {
+      const transformed = await transformForSpeech(sourceText, meta || {}, signal);
+      if (gen !== listenGen) return { engine: 'aborted' };
+      preparing = false;
+      const result = await playNarration(transformed.script, {
+        onEnd: opts && opts.onEnd,
+        gen,
+        alreadyPreparing: false,
+        allowBrowserFallback: !!(opts && opts.allowBrowserFallback)
+      });
+      if (result && result.engine !== 'aborted') {
+        result.scriptEngine = transformed.engine;
+        result.cacheId = transformed.cacheId;
+        result.script = transformed.script;
+      }
+      return result;
+    } catch (err) {
+      if (gen === listenGen) {
+        speaking = false;
+        preparing = false;
+        audioPhase = 'idle';
+        onSpeakEnd = null;
+      }
+      throw err;
+    }
   }
 
   function audioStatus(cfg) {
@@ -1030,13 +1172,13 @@ window.AITrainer = (function () {
     const ds = !!deepseekProvider(c);
     const oai = !!openaiProvider(c);
     if (ds && oai) {
-      return 'Script: DeepSeek · Voice: OpenAI (Southern/Texas). Cached replays are free.';
+      return 'Script: DeepSeek · Voice: OpenAI (Southern/Texas). Stop cancels both. No device-voice fallback while OpenAI is enabled.';
     }
     if (oai && !ds) {
       return 'OpenAI TTS ready (Southern/Texas). Add DeepSeek for teacher-style scripts.';
     }
     if (ds && !oai) {
-      return 'DeepSeek ready for scripts/coach. Add OpenAI for natural Southern/Texas voice.';
+      return 'DeepSeek ready for scripts/coach. Add OpenAI for natural Southern/Texas voice (otherwise device voice).';
     }
     return 'Basic device voice only. Add DeepSeek (script/coach) and OpenAI (TTS) under AI Trainer.';
   }
@@ -1065,6 +1207,7 @@ window.AITrainer = (function () {
     speakLesson,
     stopSpeech,
     isSpeaking,
+    getAudioPhase,
     audioStatus,
     DEFAULT_TTS_VOICE,
     DEFAULT_TTS_MODEL,

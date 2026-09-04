@@ -227,6 +227,15 @@ button { font: inherit; color: inherit; }
   padding: .65rem .8rem;
   border: 1px solid var(--border);
   border-radius: var(--radius);
+}
+.section-audio-bar #audioLiveStatus {
+  flex: 1 1 12rem;
+  margin: 0;
+  font-weight: 600;
+}
+.section-audio-bar .btn:disabled {
+  opacity: .55;
+}
   background: var(--bg-sunken);
 }
 .section-audio-bar .hint { margin: 0; flex: 1; min-width: 12rem; }
