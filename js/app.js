@@ -257,12 +257,17 @@
 
   function setListenUi(playing) {
     if (!listenToggle) return;
+    const { section } = parseHash();
+    const onCourse = section === 'course';
+    /* Course page has its own Play/Stop/Preload row — hide the lone top ▶ so it is not mistaken for the only control */
+    listenToggle.hidden = onCourse;
+    listenToggle.style.display = onCourse ? 'none' : '';
     const phase = window.AITrainer && AITrainer.getAudioPhase ? AITrainer.getAudioPhase() : (playing ? 'playing' : 'idle');
     const busy = !!playing || phase === 'preparing' || phase === 'playing';
     listenToggle.classList.toggle('is-playing', busy);
     listenToggle.setAttribute('aria-pressed', busy ? 'true' : 'false');
-    listenToggle.setAttribute('aria-label', busy ? 'Stop listening' : 'Start listening');
-    listenToggle.title = busy ? 'Stop' : 'Start listening';
+    listenToggle.setAttribute('aria-label', busy ? 'Stop page audio' : 'Play page audio (OpenAI)');
+    listenToggle.title = busy ? 'Stop' : 'Play page audio';
     listenToggle.textContent = busy ? '■' : '▶';
     syncCourseAudioBar(busy, phase);
   }
@@ -2476,6 +2481,12 @@
     if (section !== 'exam') stopExamTimer();
 
     document.body.classList.toggle('is-landing', section === 'home' || section === '');
+    document.body.classList.toggle('is-course', section === 'course');
+    if (listenToggle) {
+      const onCourse = section === 'course';
+      listenToggle.hidden = onCourse;
+      listenToggle.style.display = onCourse ? 'none' : '';
+    }
 
     setActiveNav(section === '' ? 'home' : section);
     refreshSidebarStats();

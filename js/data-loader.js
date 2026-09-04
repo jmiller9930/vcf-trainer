@@ -665,10 +665,8 @@ window.DataLoader = (function () {
     sorted.forEach(item => {
       const ac = item.acronym;
       const escAc = ac.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      if (new RegExp(`${escAc}\\s*\\(`, 'i').test(out) && !all) {
-        /* already expanded somewhere — still expand first bare if wanted */
-      }
-      const re = new RegExp(`\\b(${escAc})\\b(?!\\s*\\()`, all ? 'gi' : 'i');
+      /* Skip tokens already written as ACRONYM (…), and skip (ACRONYM) parentheticals */
+      const re = new RegExp(`(?<!\\()\\b(${escAc})\\b(?!\\s*\\()`, all ? 'gi' : 'i');
       out = out.replace(re, (match) => {
         const key = match.toUpperCase();
         if (!all && seen.has(key)) return match;
