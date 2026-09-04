@@ -1596,10 +1596,13 @@ table.data td.num { font-variant-numeric: tabular-nums; }
   font: inherit;
 }
 .ai-config textarea { min-height: 4.5rem; resize: vertical; }
-.ai-role-trainer {
-  border-left: 3px solid var(--how);
-  padding-left: .75rem;
+.howto-optional {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+  background: var(--bg-elev);
 }
+.howto-ai-config { margin-top: .85rem; }
 .ai-role-tts {
   border-left: 3px solid var(--accent);
   padding-left: .75rem;

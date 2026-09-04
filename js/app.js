@@ -466,13 +466,53 @@
 
   function renderHowTo() {
     const seen = isHowToSeen();
+    const cfg = window.AITrainer ? AITrainer.loadConfig() : null;
+    const dsSaved = !!(cfg && AITrainer.hasKey(cfg.deepseek));
+    const oaiSaved = !!(cfg && AITrainer.hasKey(cfg.openai));
+    const dsFp = dsSaved ? AITrainer.keyFingerprint(cfg.deepseek.apiKey) : '';
+    const oaiFp = oaiSaved ? AITrainer.keyFingerprint(cfg.openai.apiKey) : '';
+
     view.innerHTML = `
       ${pageHead('HowTo', 'Rainpole lab + how this trainer works', 'Read this once (or skip if you already have). You are solving the Rainpole Financial Services architect lab with Broadcom-aligned method — not memorizing letter answers.')}
 
       <section class="section howto-section howto-lab">
         <h3>The lab you must solve: Rainpole (RFS)</h3>
         <p>Modules are chapters of <strong>one customer design</strong>. Current-state drawings show <em>where they are</em>. Business initiatives and design decisions show <em>what they want to achieve</em>. Your job is to classify evidence (RCAR), separate FR from measurable NFR, and defend every decision with traceability + AMPRS.</p>
-        <p class="hint">Rainpole detail in the kit is thin in places. Work with what is stated. If a BR/NFR is missing, label it as an assumption to validate — do not invent customer facts. Optional BYOK AI coach is your ask channel when stuck; it must obey the same rule.</p>
+        <p class="hint">Rainpole detail in the kit is thin in places. Work with what is stated. If a BR/NFR is missing, label it as an assumption to validate — do not invent customer facts.</p>
+      </section>
+
+      <section class="section howto-section howto-optional" id="howto-optional-ai">
+        <h3>Optional before you start — AI Trainer + TTS</h3>
+        <p><strong>Recommended, not required.</strong> Study, Course, Quiz, Exam, drawings, and blocking checks all work with <em>zero</em> API keys. You can configure later under <a href="#ai">AI Trainer</a>.</p>
+        <ul class="howto-list">
+          <li><strong>DeepSeek = AI Trainer</strong> (optional) — coach Q&amp;A + spoken lesson <em>scripts</em>.</li>
+          <li><strong>OpenAI = TTS</strong> (optional) — Southern / Texas instructor voice for Listen / Play module.</li>
+          <li><strong>Without keys</strong> — full course path still works; Listen uses the device voice; no coach panel.</li>
+        </ul>
+        <p class="hint">Status: DeepSeek ${dsSaved ? `saved (${esc(dsFp)})` : 'not set'} · OpenAI TTS ${oaiSaved ? `saved (${esc(oaiFp)})` : 'not set'}</p>
+
+        <div class="card ai-config howto-ai-config">
+          <label class="ai-toggle">
+            <input type="checkbox" id="aiEnabled" ${cfg && cfg.enabled ? 'checked' : ''}>
+            <span>Enable AI Trainer (DeepSeek coach + scripts) when keys are present</span>
+          </label>
+          <div class="ai-provider ai-role-trainer">
+            <h4>DeepSeek — AI Trainer (optional)</h4>
+            <label class="ai-toggle"><input type="checkbox" id="aiDeepSeekOn" ${!cfg || cfg.deepseek.enabled ? 'checked' : ''}> Use DeepSeek</label>
+            <label class="field-label">API key<input type="password" id="aiDeepSeekKey" autocomplete="off" spellcheck="false" value="" placeholder="${dsSaved ? 'Leave blank to keep saved key' : 'sk-…'}"></label>
+          </div>
+          <div class="ai-provider ai-role-tts">
+            <h4>OpenAI — TTS only (optional)</h4>
+            <label class="ai-toggle"><input type="checkbox" id="aiOpenAiOn" ${!cfg || cfg.openai.enabled ? 'checked' : ''}> Use OpenAI for TTS</label>
+            <label class="field-label">API key<input type="password" id="aiOpenAiKey" autocomplete="off" spellcheck="false" value="" placeholder="${oaiSaved ? 'Leave blank to keep saved key' : 'sk-…'}"></label>
+          </div>
+          <div class="cta-row">
+            <button type="button" class="btn btn-primary" data-action="howto-ai-save">Save optional keys</button>
+            <a class="btn" href="#ai">Full AI / TTS settings</a>
+            <button type="button" class="btn" data-action="howto-continue">Skip — enter course without keys</button>
+          </div>
+          <p class="hint" id="howtoAiStatus">You can enter the course now. Keys are optional.</p>
+        </div>
       </section>
 
       <section class="section howto-section">
@@ -499,7 +539,7 @@
           <li><strong>Rainpole evidence callouts</strong> — long Course sections highlight key lab facts you must use.</li>
           <li><strong>9.1 Delta is informational</strong> — awareness only; you are not dinged for a valid 9.0/course-baseline answer solely because 9.1 later changed something.</li>
           <li><strong>Text size</strong> — A− / A+ in the top bar (saved on this device).</li>
-          <li><strong>Listen / AI audio</strong> — DeepSeek writes a short teacher script; OpenAI speaks it in a clear <strong>Southern / Texas</strong> instructor voice. Course has Listen to section and Play module. Without keys, the device voice is used.</li>
+          <li><strong>Listen / TTS</strong> — optional. With OpenAI (+ DeepSeek scripts) you get Southern/Texas narration; without keys, device voice still works for Listen.</li>
         </ul>
       </section>
 
@@ -523,16 +563,8 @@
           <li><a href="#study">Study</a> — module tiles = map; open each module’s Course and read the long sections.</li>
           <li><a href="#quiz">Quiz</a> / <a href="#exam">Exam</a> — retrieval and gate.</li>
           <li><a href="#delta">9.1 Delta</a> — informational updates.</li>
-          <li><a href="#ai">AI Trainer</a> — optional bring-your-own API key coach.</li>
+          <li><a href="#ai">AI Trainer</a> — optional BYOK (same settings as above).</li>
         </ol>
-      </section>
-
-      <section class="section howto-section howto-ai">
-        <h3>Optional AI trainer (bring your own API keys)</h3>
-        <p><strong>DeepSeek = AI Trainer</strong> (coach + spoken scripts). <strong>OpenAI = TTS</strong> (Southern/Texas voice only). No quorum. Course works without keys.</p>
-        <div class="cta-row">
-          <a class="btn" href="#ai">Configure AI Trainer</a>
-        </div>
       </section>
 
       <div class="cta-row howto-cta">
@@ -1294,45 +1326,48 @@
 
   function readAIForm() {
     const prev = AITrainer.loadConfig();
+    const deepSeekOnEl = document.getElementById('aiDeepSeekOn');
+    const openAiOnEl = document.getElementById('aiOpenAiOn');
     return {
       enabled: !!(document.getElementById('aiEnabled') || {}).checked,
       quorum: false,
       openai: {
-        enabled: !!(document.getElementById('aiOpenAiOn') || {}).checked,
+        enabled: openAiOnEl ? !!openAiOnEl.checked : !!(prev.openai && prev.openai.enabled),
         apiKey: (document.getElementById('aiOpenAiKey') || {}).value || '',
         model: prev.openai.model || 'gpt-4o-mini',
-        baseUrl: (document.getElementById('aiOpenAiBase') || {}).value || '',
-        ttsModel: (document.getElementById('aiOpenAiTtsModel') || {}).value || '',
-        ttsVoice: (document.getElementById('aiOpenAiTtsVoice') || {}).value || '',
-        ttsStyle: (document.getElementById('aiOpenAiTtsStyle') || {}).value || ''
+        baseUrl: (document.getElementById('aiOpenAiBase') || {}).value || prev.openai.baseUrl || '',
+        ttsModel: (document.getElementById('aiOpenAiTtsModel') || {}).value || prev.openai.ttsModel || '',
+        ttsVoice: (document.getElementById('aiOpenAiTtsVoice') || {}).value || prev.openai.ttsVoice || '',
+        ttsStyle: (document.getElementById('aiOpenAiTtsStyle') || {}).value || prev.openai.ttsStyle || ''
       },
       deepseek: {
-        enabled: !!(document.getElementById('aiDeepSeekOn') || {}).checked,
+        enabled: deepSeekOnEl ? !!deepSeekOnEl.checked : !!(prev.deepseek && prev.deepseek.enabled),
         apiKey: (document.getElementById('aiDeepSeekKey') || {}).value || '',
-        model: (document.getElementById('aiDeepSeekModel') || {}).value || '',
-        baseUrl: (document.getElementById('aiDeepSeekBase') || {}).value || ''
+        model: (document.getElementById('aiDeepSeekModel') || {}).value || prev.deepseek.model || '',
+        baseUrl: (document.getElementById('aiDeepSeekBase') || {}).value || prev.deepseek.baseUrl || ''
       }
     };
   }
 
-  function saveAIFromForm() {
+  function saveAIFromForm(opts) {
+    const fromHowTo = !!(opts && opts.fromHowTo);
     const cfg = AITrainer.saveConfig(readAIForm());
-    const status = document.getElementById('aiConfigStatus');
+    const status = document.getElementById(fromHowTo ? 'howtoAiStatus' : 'aiConfigStatus');
     if (status) {
       if (cfg._persisted === false) {
-        status.textContent = `Could not save BYOK settings: ${cfg._persistError || 'storage blocked'}. Check private browsing / storage permissions.`;
+        status.textContent = `Could not save BYOK settings: ${cfg._persistError || 'storage blocked'}.`;
       } else {
         const bits = [];
         if (cfg._deepSeekSaved) bits.push(`DeepSeek ${AITrainer.keyFingerprint(cfg.deepseek.apiKey)}`);
-        if (cfg._openAiSaved) bits.push(`OpenAI ${AITrainer.keyFingerprint(cfg.openai.apiKey)}`);
+        if (cfg._openAiSaved) bits.push(`OpenAI TTS ${AITrainer.keyFingerprint(cfg.openai.apiKey)}`);
         status.textContent = bits.length
-          ? `Saved on this device — ${bits.join(' · ')}. Blank key fields keep existing keys.`
-          : 'Saved on this device — no API keys stored yet.';
+          ? `Saved on this device — ${bits.join(' · ')}. Course still works without these.`
+          : 'Saved. No API keys stored — course works fully without them.';
       }
     }
     const summary = document.getElementById('aiPersistSummary');
     if (summary) {
-      summary.textContent = `Stored keys: DeepSeek ${cfg._deepSeekSaved ? `yes (${AITrainer.keyFingerprint(cfg.deepseek.apiKey)})` : 'no'} · OpenAI ${cfg._openAiSaved ? `yes (${AITrainer.keyFingerprint(cfg.openai.apiKey)})` : 'no'}`;
+      summary.textContent = `DeepSeek (AI Trainer): ${cfg._deepSeekSaved ? `ready (${AITrainer.keyFingerprint(cfg.deepseek.apiKey)})` : 'not ready'} · OpenAI (TTS): ${cfg._openAiSaved ? `ready (${AITrainer.keyFingerprint(cfg.openai.apiKey)})` : 'not ready'}`;
     }
     refreshSidebarStats();
     syncAiCoach();
@@ -2188,6 +2223,9 @@
       case 'howto-continue':
       case 'howto-skip':
         continueFromHowTo();
+        break;
+      case 'howto-ai-save':
+        saveAIFromForm({ fromHowTo: true });
         break;
       case 'quiz-answer': answerQuiz(index); break;
       case 'quiz-toggle': toggleQuizOption(index); break;

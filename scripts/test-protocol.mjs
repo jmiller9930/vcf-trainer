@@ -151,14 +151,15 @@ function mainStaticChecks() {
   ok('listen / TTS wired', fs.readFileSync(path.join(root, 'js/ai-trainer.js'), 'utf8').includes('speakText') && fs.readFileSync(path.join(root, 'index.html'), 'utf8').includes('listenToggle'));
   const aiSrc = fs.readFileSync(path.join(root, 'js/ai-trainer.js'), 'utf8');
   ok('DeepSeek scripts + OpenAI TTS split', aiSrc.includes('speakLesson') && aiSrc.includes('transformForSpeech') && aiSrc.includes('Southern'));
-  ok('HowTo documents provider audio roles', fs.readFileSync(path.join(root, 'js/app.js'), 'utf8').includes('DeepSeek writes a short teacher script') && fs.readFileSync(path.join(root, 'js/app.js'), 'utf8').includes('Southern / Texas'));
+  ok('HowTo documents provider audio roles', fs.readFileSync(path.join(root, 'js/app.js'), 'utf8').includes('DeepSeek = AI Trainer') && fs.readFileSync(path.join(root, 'js/app.js'), 'utf8').includes('OpenAI = TTS'));
   ok('BYOK save keeps blank keys', aiSrc.includes('Leave blank to keep') || fs.readFileSync(path.join(root, 'js/app.js'), 'utf8').includes('Leave blank to keep saved key'));
   ok('BYOK saveConfig preserves prior keys', aiSrc.includes('clearOpenAiKey') && aiSrc.includes('hasKey(prev.openai)'));
   const appAi = fs.readFileSync(path.join(root, 'js/app.js'), 'utf8');
   ok('config labels DeepSeek AI Trainer and OpenAI TTS', appAi.includes('DeepSeek — AI Trainer') && appAi.includes('OpenAI — TTS voice only'));
   ok('quorum removed from AI config UI', !appAi.includes('id="aiQuorum"'));
   ok('SW network-first for app shell', fs.readFileSync(path.join(root, 'sw.js'), 'utf8').includes('network-first') || fs.readFileSync(path.join(root, 'sw.js'), 'utf8').includes('isAppShell'));
-  ok('index cache-busts build 14', fs.readFileSync(path.join(root, 'index.html'), 'utf8').includes('VCF_BUILD = \'14\'') && fs.readFileSync(path.join(root, 'index.html'), 'utf8').includes('app.js?v=14'));
+  ok('index cache-busts build', fs.readFileSync(path.join(root, 'index.html'), 'utf8').includes("VCF_BUILD = '15'"));
+  ok('HowTo states AI/TTS optional', appAi.includes('Recommended, not required') && appAi.includes('howto-ai-save'));
 }
 
 async function mainHttpChecks() {
