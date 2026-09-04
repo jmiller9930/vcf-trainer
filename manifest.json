@@ -1,8 +1,8 @@
 {
-  "name": "VCF 9 Trainer",
-  "short_name": "VCF9",
-  "description": "Study, quiz and mock-exam trainer for the VMware Cloud Foundation 9 Architect exam.",
-  "start_url": ".",
+  "name": "VCF-9 AI Trainer",
+  "short_name": "VCF-9 AI",
+  "description": "Self-paced VCF 9 Architect training with drawings and blocking checks. Optional AI coach is bring-your-own API key.",
+  "start_url": "./#home",
   "scope": ".",
   "display": "standalone",
   "orientation": "any",

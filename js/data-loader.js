@@ -20,10 +20,11 @@ window.DataLoader = (function () {
   const SOURCES = {
     modules:   'data/modules.json',
     questions: 'data/questions.json',
-    delta:     'data/delta91.json'
+    delta:     'data/delta91.json',
+    figures:   'data/figures.json'
   };
 
-  const cache = { modules: [], questions: [], delta: [] };
+  const cache = { modules: [], questions: [], delta: [], figures: [] };
   const errors = [];
   let loadPromise = null;
 
@@ -168,14 +169,89 @@ window.DataLoader = (function () {
       })(),
       course: (() => {
         const course = raw.course || {};
-        const sections = arr(course.sections).map((s, si) => ({
-          id: str(s.id) || `${id}-s${si + 1}`,
-          title: str(s.title || s.name) || `Section ${si + 1}`,
-          body: str(s.body || s.text || s.content),
-          highlightIds: arr(s.highlightIds || s.highlights || s.callbacks).map(str).filter(Boolean)
-        })).filter(s => s.body || s.title);
+        const sections = arr(course.sections).map((s, si) => {
+          const kc = s.knowledgeCheck || s.check || s.quiz;
+          let knowledgeCheck = null;
+          if (kc && (kc.stem || kc.question)) {
+            const options = arr(kc.options || kc.choices).map(o =>
+              typeof o === 'string' ? o.trim() : str(o.text || o.label)
+            ).filter(Boolean);
+            let answer = kc.answer != null ? kc.answer
+              : kc.correctIndex != null ? kc.correctIndex
+              : kc.correct;
+            if (typeof answer === 'string' && /^[A-Za-z]$/.test(answer.trim())) {
+              answer = answer.trim().toUpperCase().charCodeAt(0) - 65;
+            }
+            answer = Number(answer);
+            if (!Number.isInteger(answer) || answer < 0 || answer >= options.length) answer = 0;
+            knowledgeCheck = {
+              stem: str(kc.stem || kc.question || kc.text),
+              options,
+              answer,
+              explanation: str(kc.explanation || kc.rationale),
+              reinforce: str(kc.reinforce || kc.remediation || kc.studyClip),
+              sourceQuestionId: str(kc.sourceQuestionId || kc.questionId || '')
+            };
+            if (!knowledgeCheck.stem || options.length < 2) knowledgeCheck = null;
+          }
+          return {
+            id: str(s.id) || `${id}-s${si + 1}`,
+            title: str(s.title || s.name) || `Section ${si + 1}`,
+            body: str(s.body || s.text || s.content),
+            highlightIds: arr(s.highlightIds || s.highlights || s.callbacks).map(str).filter(Boolean),
+            figureId: str(s.figureId || s.figure || ''),
+            knowledgeCheck
+          };
+        }).filter(s => s.body || s.title || s.figureId);
         return sections.length ? { sections } : null;
       })()
+    };
+  }
+
+  function normaliseFigureCheck(raw, figId, i) {
+    const options = arr(raw.options || raw.choices).map(o =>
+      typeof o === 'string' ? o.trim() : str(o.text || o.label)
+    ).filter(Boolean);
+    let answer = raw.answer != null ? raw.answer
+      : raw.correctIndex != null ? raw.correctIndex
+      : raw.correct;
+    if (typeof answer === 'string' && /^[A-Za-z]$/.test(answer.trim())) {
+      answer = answer.trim().toUpperCase().charCodeAt(0) - 65;
+    }
+    answer = Number(answer);
+    if (!Number.isInteger(answer) || answer < 0 || answer >= options.length) answer = 0;
+    return {
+      id: str(raw.id) || `${figId}-kc${i + 1}`,
+      stem: str(raw.stem || raw.question || raw.text),
+      options,
+      answer,
+      explanation: str(raw.explanation || raw.rationale),
+      reinforce: str(raw.reinforce || raw.remediation),
+      objectIds: arr(raw.objectIds || raw.objects).map(str).filter(Boolean)
+    };
+  }
+
+  function normaliseFigure(raw, i) {
+    const id = str(raw.id) || `fig${i + 1}`;
+    const checks = arr(raw.checks || raw.knowledgeChecks)
+      .map((c, ci) => normaliseFigureCheck(c || {}, id, ci))
+      .filter(c => c.stem && c.options.length >= 2);
+    return {
+      id,
+      title: str(raw.title || raw.name) || id,
+      subtitle: str(raw.subtitle),
+      image: str(raw.image || raw.src || raw.url),
+      sourceSlide: raw.sourceSlide != null ? Number(raw.sourceSlide) : null,
+      moduleIds: arr(raw.moduleIds || raw.modules).map(str).filter(Boolean),
+      primer: str(raw.primer || raw.summary || raw.intro),
+      objects: arr(raw.objects).map((o, oi) => ({
+        id: str(o.id) || `${id}-obj${oi + 1}`,
+        name: str(o.name || o.title) || `Object ${oi + 1}`,
+        what: str(o.what || o.text),
+        why: str(o.why)
+      })).filter(o => o.name),
+      facts: arr(raw.facts).map(f => typeof f === 'string' ? f.trim() : str(f.text)).filter(Boolean),
+      checks
     };
   }
 
@@ -244,10 +320,11 @@ window.DataLoader = (function () {
     if (loadPromise) return loadPromise;
 
     loadPromise = (async () => {
-      const [modulesRes, questionsRes, deltaRes] = await Promise.all([
+      const [modulesRes, questionsRes, deltaRes, figuresRes] = await Promise.all([
         fetchJson(SOURCES.modules).catch(e => ({ __error: e })),
         fetchJson(SOURCES.questions).catch(e => ({ __error: e })),
-        fetchJson(SOURCES.delta).catch(e => ({ __error: e }))
+        fetchJson(SOURCES.delta).catch(e => ({ __error: e })),
+        fetchJson(SOURCES.figures).catch(e => ({ __error: e }))
       ]);
 
       if (modulesRes && modulesRes.__error) {
@@ -270,6 +347,15 @@ window.DataLoader = (function () {
         cache.delta = flattenDelta(deltaRes);
       }
 
+      if (figuresRes && figuresRes.__error) {
+        errors.push(`Could not load ${SOURCES.figures} (${figuresRes.__error.message})`);
+        cache.figures = [];
+      } else {
+        cache.figures = unwrap(figuresRes, ['figures', 'items', 'drawings'])
+          .map(normaliseFigure)
+          .filter(f => f.id && f.image);
+      }
+
       /* Questions whose moduleId does not resolve are still usable, but they
          should not disappear from module-filtered views without a trace. */
       const known = new Set(cache.modules.map(m => m.id));
@@ -278,7 +364,22 @@ window.DataLoader = (function () {
         console.warn('Questions reference unknown modules:', [...new Set(orphans.map(q => q.moduleId))]);
       }
 
-      return { modules: cache.modules, questions: cache.questions, delta: cache.delta, errors };
+      const knownFigs = new Set(cache.figures.map(f => f.id));
+      cache.modules.forEach(m => {
+        (m.course && m.course.sections || []).forEach(s => {
+          if (s.figureId && !knownFigs.has(s.figureId)) {
+            console.warn('Course section references unknown figure:', s.id, s.figureId);
+          }
+        });
+      });
+
+      return {
+        modules: cache.modules,
+        questions: cache.questions,
+        delta: cache.delta,
+        figures: cache.figures,
+        errors
+      };
     })();
 
     return loadPromise;
@@ -291,6 +392,8 @@ window.DataLoader = (function () {
   function getQuestions() { return cache.questions; }
   function getQuestion(id) { return cache.questions.find(q => q.id === id) || null; }
   function getDelta() { return cache.delta; }
+  function getFigures() { return cache.figures; }
+  function getFigure(id) { return cache.figures.find(f => f.id === id) || null; }
   function getQuestionsByModule(modId) {
     return modId ? cache.questions.filter(q => q.moduleId === modId) : cache.questions.slice();
   }
@@ -316,6 +419,8 @@ window.DataLoader = (function () {
     getQuestion,
     getDelta,
     getDeltaByArea,
+    getFigures,
+    getFigure,
     getQuestionsByModule,
     getQuestionsByType,
     getErrors

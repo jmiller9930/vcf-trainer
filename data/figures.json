@@ -1,0 +1,721 @@
+{
+  "figures": [
+    {
+      "id": "fig-design-decision-process",
+      "title": "Visual Design Decision Process",
+      "subtitle": "Requirements Traceability Matrix – Logical Visualization",
+      "image": "data/figures/fig-design-decision-process.png",
+      "sourceSlide": 3,
+      "moduleIds": ["mod3", "mod8"],
+      "primer": "This drawing is the rule for every later design decision in the course. Conceptual inputs (RCAR) feed a Design Decision; the decision is only complete when it carries Justification + AMPRS. The red banner is not decoration: all design decisions are driven by the Conceptual Model.",
+      "objects": [
+        {
+          "id": "banner",
+          "name": "Red banner — Conceptual Model drives decisions",
+          "what": "Reminder printed above the flow: every Design Decision must be driven by the Conceptual Model.",
+          "why": "Stops product-first or example-first answers. If you cannot point back to RCAR evidence, the decision is not defendable."
+        },
+        {
+          "id": "conceptual-column",
+          "name": "Conceptual column",
+          "what": "Left side of the drawing: Requirements, Constraints, Risks, Assumptions.",
+          "why": "These are inputs, not outputs. They exist before you pick a topology or product."
+        },
+        {
+          "id": "requirements",
+          "name": "Requirements",
+          "what": "What the solution must do or achieve (functional and non-functional).",
+          "why": "Primary driver into the Design Decision. No requirement means no justification for a capability."
+        },
+        {
+          "id": "constraints",
+          "name": "Constraints",
+          "what": "Boundaries you cannot change (existing fabric, budget, regulation, skills).",
+          "why": "Also drive the Design Decision directly. Constraints limit the solution space."
+        },
+        {
+          "id": "risks",
+          "name": "Risks",
+          "what": "Conditions that could cause the design to miss requirements.",
+          "why": "Risks do not jump straight to a product choice; they feed Risk Mitigation."
+        },
+        {
+          "id": "assumptions",
+          "name": "Assumptions",
+          "what": "Believed-true statements that are not yet validated.",
+          "why": "The drawing shows Assumptions feeding Risks. Unvalidated assumptions are a common root of design failure."
+        },
+        {
+          "id": "risk-mitigation",
+          "name": "Risk Mitigation",
+          "what": "Actions that reduce or handle identified risks.",
+          "why": "Sits between Risks and the Design Decision so mitigation is part of the decision, not an afterthought."
+        },
+        {
+          "id": "validate",
+          "name": "Validate",
+          "what": "Proof step for assumptions and related claims before you lock the decision.",
+          "why": "Validation joins the same spine into the Design Decision. Guessing is not a decision."
+        },
+        {
+          "id": "design-decision",
+          "name": "Design Decision",
+          "what": "The Logical output: the choice you will defend.",
+          "why": "It is the convergence point of Requirements, Constraints, Risk Mitigation, and Validate."
+        },
+        {
+          "id": "justification-amprs",
+          "name": "Justification + AMPRS",
+          "what": "Every decision must include why it is correct and how it scores on Availability, Manageability, Performance, Recoverability, Security.",
+          "why": "A choice without justification and AMPRS review is incomplete on this template."
+        },
+        {
+          "id": "logical-column",
+          "name": "Logical column",
+          "what": "Right side: Design Decision and Justification + AMPRS.",
+          "why": "Separates evidence (Conceptual) from the choice you will implement (Logical)."
+        }
+      ],
+      "facts": [
+        "Conceptual inputs are Requirements, Constraints, Risks, Assumptions.",
+        "Assumptions feed Risks; Risks feed Risk Mitigation.",
+        "Requirements and Constraints point directly at the Design Decision.",
+        "Risk Mitigation and Validate join the spine into the Design Decision.",
+        "Design Decision produces Justification + AMPRS.",
+        "All decisions are driven by the Conceptual Model."
+      ],
+      "checks": [
+        {
+          "id": "kc-ddp-1",
+          "stem": "On this drawing, which side holds Requirements, Constraints, Risks, and Assumptions?",
+          "options": [
+            "Logical column",
+            "Conceptual column",
+            "Only the AMPRS box",
+            "Only Risk Mitigation"
+          ],
+          "answer": 1,
+          "explanation": "Those four RCAR boxes sit under Conceptual. Logical holds the Design Decision and Justification + AMPRS.",
+          "reinforce": "Re-read the left column header: Conceptual. Those boxes are inputs, not the decision itself.",
+          "objectIds": ["conceptual-column", "requirements", "constraints", "risks", "assumptions"]
+        },
+        {
+          "id": "kc-ddp-2",
+          "stem": "According to the arrows on this drawing, what do Assumptions feed?",
+          "options": [
+            "Design Decision directly, with no other step",
+            "Requirements",
+            "Risks",
+            "Modern Hardware"
+          ],
+          "answer": 2,
+          "explanation": "The dotted relationship from Assumptions goes to Risks. Assumptions that prove false become risks to the design.",
+          "reinforce": "Find Assumptions at the bottom-left and follow the dotted arrow up to Risks.",
+          "objectIds": ["assumptions", "risks"]
+        },
+        {
+          "id": "kc-ddp-3",
+          "stem": "What must sit with a Design Decision before the decision is complete on this template?",
+          "options": [
+            "A preferred vendor quote only",
+            "Justification + AMPRS",
+            "A blank workbook row",
+            "An assumption that was never validated"
+          ],
+          "answer": 1,
+          "explanation": "The Logical output is Design Decision leading into Justification + AMPRS. AMPRS is Availability, Manageability, Performance, Recoverability, Security.",
+          "reinforce": "Look at the rightmost Logical boxes: Decision then Justification + AMPRS.",
+          "objectIds": ["design-decision", "justification-amprs"]
+        },
+        {
+          "id": "kc-ddp-4",
+          "stem": "What does the red banner require for every design decision?",
+          "options": [
+            "Drive the decision from the Conceptual Model",
+            "Drive the decision from the instructor demo",
+            "Drive the decision from the cheapest SKU",
+            "Drive the decision from a blank template"
+          ],
+          "answer": 0,
+          "explanation": "The banner states that all design decisions are driven to / by the Conceptual Model — the RCAR evidence set.",
+          "reinforce": "Read the red line at the top of the slide before you leave this drawing.",
+          "objectIds": ["banner"]
+        }
+      ]
+    },
+    {
+      "id": "fig-business-initiatives",
+      "title": "Business Initiatives Capability Map",
+      "subtitle": "RFS Future State Architecture: Mapping IT capabilities to business initiatives and priorities",
+      "image": "data/figures/fig-business-initiatives.png",
+      "sourceSlide": 7,
+      "moduleIds": ["mod3", "mod9"],
+      "primer": "This drawing is top-down: Business Initiatives → Use Cases → Services/Capabilities → Private Cloud Operating Model. It explains why VCF exists for Rainpole: technology is justified by business initiatives, not the reverse.",
+      "objects": [
+        {
+          "id": "init-infra",
+          "name": "Business initiative — Modernize Infrastructure",
+          "what": "Top-left initiative: modernize the infrastructure platform.",
+          "why": "Parent of on-prem private cloud, optimize ops, and extend to edge/public/sovereign clouds."
+        },
+        {
+          "id": "init-app",
+          "name": "Business initiative — Application Modernization",
+          "what": "Top-center initiative: modernize how apps are built and run.",
+          "why": "Parent of self-service for app teams, Kubernetes/modern apps, and Private AI apps."
+        },
+        {
+          "id": "init-sec",
+          "name": "Business initiative — Security Modernization",
+          "what": "Top-right initiative: modernize security outcomes.",
+          "why": "Parent of compliance/hardening, lateral security/IDS-IPS, and faster ransomware/disaster recovery."
+        },
+        {
+          "id": "uc-private-cloud",
+          "name": "Use case — Build/deploy private cloud on-premises",
+          "what": "Use case under Modernize Infrastructure.",
+          "why": "Direct driver for VCF as the private cloud foundation."
+        },
+        {
+          "id": "uc-optimize",
+          "name": "Use case — Optimize infrastructure and operations",
+          "what": "Ops/efficiency use case under Modernize Infrastructure.",
+          "why": "Ties Day-2 operations and fleet practices to a business initiative."
+        },
+        {
+          "id": "uc-extend",
+          "name": "Use case — Extend DC to edge, public, sovereign clouds",
+          "what": "Hybrid/extension use case under Modernize Infrastructure.",
+          "why": "Shows the operating model is not only a single on-prem silo."
+        },
+        {
+          "id": "uc-self-service",
+          "name": "Use case — Self-service for app teams",
+          "what": "Consumption use case under Application Modernization.",
+          "why": "Explains why Self-Service IaaS appears in the services layer."
+        },
+        {
+          "id": "uc-k8s",
+          "name": "Use case — Kubernetes and modern apps",
+          "what": "Modern runtime use case under Application Modernization.",
+          "why": "Maps to Next Gen Apps capability."
+        },
+        {
+          "id": "uc-private-ai",
+          "name": "Use case — Private AI apps",
+          "what": "AI application use case under Application Modernization.",
+          "why": "Appears again as a named service/capability (Private AI)."
+        },
+        {
+          "id": "uc-compliance",
+          "name": "Use case — Compliance and harden infrastructure",
+          "what": "Security use case under Security Modernization.",
+          "why": "Business reason for governance and hardening controls later in design."
+        },
+        {
+          "id": "uc-lateral",
+          "name": "Use case — Lateral security / intrusion prevention",
+          "what": "East-west security use case under Security Modernization.",
+          "why": "Justifies segmentation and detection capabilities in the platform."
+        },
+        {
+          "id": "uc-ransomware",
+          "name": "Use case — Accelerate ransomware/disaster recovery",
+          "what": "Recovery-speed use case under Security Modernization.",
+          "why": "Business driver for data protection and ransomware recovery capabilities."
+        },
+        {
+          "id": "svc-layer",
+          "name": "Services / Capabilities layer",
+          "what": "Self-Service IaaS, Legacy VM Apps, Next Gen Apps, Private AI, plus Service X/Y/Z placeholders.",
+          "why": "Many-to-many bridge: use cases consume services; services sit on one operating model."
+        },
+        {
+          "id": "op-model",
+          "name": "Private Cloud Operating Model (Service Factory, Service Operator)",
+          "what": "Bottom foundation spanning the whole map.",
+          "why": "All services depend on one operating model — not three disconnected silos."
+        }
+      ],
+      "facts": [
+        "Hierarchy is Initiative → Use Case → Services/Capabilities → Operating Model.",
+        "Three initiatives: Modernize Infrastructure, Application Modernization, Security Modernization.",
+        "Each initiative has three use cases (nine total).",
+        "Services include Self-Service IaaS, Legacy VM Apps, Next Gen Apps, Private AI, and placeholders X/Y/Z.",
+        "Everything rests on the Private Cloud Operating Model (Service Factory, Service Operator)."
+      ],
+      "checks": [
+        {
+          "id": "kc-bi-1",
+          "stem": "What is the correct top-to-bottom order on this drawing?",
+          "options": [
+            "Operating Model → Services → Use Cases → Business Initiatives",
+            "Business Initiatives → Use Cases → Services/Capabilities → Private Cloud Operating Model",
+            "Services → Business Initiatives → Hardware → Use Cases",
+            "Use Cases → Operating Model → Business Initiatives → Spines"
+          ],
+          "answer": 1,
+          "explanation": "The map is business-first: initiatives on top, then use cases, then services, then the shared operating model.",
+          "reinforce": "Read the four horizontal bands from top to bottom on the slide.",
+          "objectIds": ["init-infra", "svc-layer", "op-model"]
+        },
+        {
+          "id": "kc-bi-2",
+          "stem": "Which three business initiatives appear at the top of this drawing?",
+          "options": [
+            "Compute, Storage, Network",
+            "Modernize Infrastructure, Application Modernization, Security Modernization",
+            "Production, DMZ, Development",
+            "Spine, Leaf, Rack"
+          ],
+          "answer": 1,
+          "explanation": "Those three initiative pills are the top band of the RFS future-state map.",
+          "reinforce": "Look at the three large rounded buttons across the top of the figure.",
+          "objectIds": ["init-infra", "init-app", "init-sec"]
+        },
+        {
+          "id": "kc-bi-3",
+          "stem": "What does every service on this map sit on?",
+          "options": [
+            "A separate operating model per silo",
+            "The Private Cloud Operating Model (Service Factory, Service Operator)",
+            "Only the Security Modernization initiative",
+            "Only dark-fibre DCI"
+          ],
+          "answer": 1,
+          "explanation": "The bottom capsule is the shared Private Cloud Operating Model that underpins all listed services.",
+          "reinforce": "Find the long white bar at the bottom of the diagram.",
+          "objectIds": ["op-model", "svc-layer"]
+        },
+        {
+          "id": "kc-bi-4",
+          "stem": "Private AI appears in this drawing as:",
+          "options": [
+            "Only a spine switch label",
+            "A use case under Application Modernization and a named service/capability",
+            "Only a storage array",
+            "Only an AMPRS score"
+          ],
+          "answer": 1,
+          "explanation": "Private AI is both an Application Modernization use case and a service/capability oval.",
+          "reinforce": "Find Private AI in the use-case row and again in the services row.",
+          "objectIds": ["uc-private-ai", "svc-layer"]
+        }
+      ]
+    },
+    {
+      "id": "fig-independent-vsphere",
+      "title": "Current State: Independent vSphere Environments",
+      "subtitle": "Rainpole siloed Production, DMZ, and Development",
+      "image": "data/figures/fig-independent-vsphere.png",
+      "sourceSlide": 8,
+      "moduleIds": ["mod3", "mod5", "mod6", "mod11"],
+      "primer": "This drawing is the as-is problem statement: three independent vSphere environments with dedicated vCenters. Storage is partly shared at the fabric layer for Prod/DMZ but arrays stay dedicated; Development is fully isolated. VCF design work starts from this siloed current state.",
+      "objects": [
+        {
+          "id": "env-prod",
+          "name": "Production environment (blue)",
+          "what": "Own vCenter, vSphere Cluster with VMs, and dedicated physical hosts.",
+          "why": "Shows production is a management and compute silo today."
+        },
+        {
+          "id": "env-dmz",
+          "name": "DMZ environment (yellow)",
+          "what": "Own vCenter, vSphere Cluster with VMs, and dedicated physical hosts.",
+          "why": "DMZ is intentionally separate for security posture, still independently managed."
+        },
+        {
+          "id": "env-dev",
+          "name": "Development environment (green)",
+          "what": "Own vCenter, vSphere Cluster with VMs, and dedicated physical hosts.",
+          "why": "Dev is a third management silo, not a cluster under production vCenter."
+        },
+        {
+          "id": "vcenter-per-env",
+          "name": "Dedicated vCenter per environment",
+          "what": "Three separate vCenter instances — one above each cluster.",
+          "why": "There is no single management plane across Prod/DMZ/Dev in current state."
+        },
+        {
+          "id": "clusters-hosts",
+          "name": "vSphere Cluster + hosts per environment",
+          "what": "Each environment has its own cluster box and host icons beneath it.",
+          "why": "Compute is not shared across the three environments in this drawing."
+        },
+        {
+          "id": "fabric-prod-dmz",
+          "name": "Prod/DMZ FC Fabric (shared)",
+          "what": "One horizontal Fibre Channel fabric bar spanning Production and DMZ.",
+          "why": "Connectivity is shared between Prod and DMZ — but that is not the same as shared arrays."
+        },
+        {
+          "id": "fabric-dev",
+          "name": "Dev FC Fabric (dedicated)",
+          "what": "Separate shorter FC fabric bar under Development only.",
+          "why": "Development storage networking is isolated from Prod/DMZ."
+        },
+        {
+          "id": "arrays-prod-dmz",
+          "name": "Dedicated storage arrays under Prod/DMZ fabric",
+          "what": "Two separate disk stacks under the shared Prod/DMZ fabric.",
+          "why": "Shared fabric, dedicated arrays — data-at-rest stays per environment."
+        },
+        {
+          "id": "array-dev",
+          "name": "Dedicated Dev storage array",
+          "what": "One disk stack under the Dev FC fabric.",
+          "why": "Dev has both its own fabric and its own array."
+        }
+      ],
+      "facts": [
+        "Three environments: Production, DMZ, Development.",
+        "Each environment has a dedicated vCenter.",
+        "Prod/DMZ share an FC fabric but use dedicated arrays each.",
+        "Development has dedicated FC fabric and dedicated array.",
+        "Current state is siloed management and mostly siloed storage."
+      ],
+      "checks": [
+        {
+          "id": "kc-iv-1",
+          "stem": "How many vCenter instances does this current-state drawing show?",
+          "options": [
+            "One shared vCenter for all three environments",
+            "Two vCenters (Prod+DMZ shared, Dev separate)",
+            "Three — one dedicated vCenter per environment",
+            "None — hosts are managed only by NSX"
+          ],
+          "answer": 2,
+          "explanation": "Each vertical environment block has its own vCenter at the top. Management is siloed.",
+          "reinforce": "Count the vCenter boxes above Production, DMZ, and Development.",
+          "objectIds": ["vcenter-per-env", "env-prod", "env-dmz", "env-dev"]
+        },
+        {
+          "id": "kc-iv-2",
+          "stem": "What is true about Prod and DMZ storage in this drawing?",
+          "options": [
+            "They share one array and one fabric",
+            "They share an FC fabric but keep dedicated storage arrays",
+            "They have no storage shown",
+            "They use only local vSAN with no fabric bar"
+          ],
+          "answer": 1,
+          "explanation": "The callout and diagram show a shared Prod/DMZ FC fabric with separate array stacks underneath.",
+          "reinforce": "Read the Prod/DMZ fabric bar, then count the two array stacks under it.",
+          "objectIds": ["fabric-prod-dmz", "arrays-prod-dmz"]
+        },
+        {
+          "id": "kc-iv-3",
+          "stem": "How is Development storage drawn relative to Prod/DMZ?",
+          "options": [
+            "Fully shared fabric and shared array with production",
+            "Dedicated FC fabric and dedicated storage array",
+            "Shared fabric with Prod but no array of its own",
+            "Only object storage with no FC fabric"
+          ],
+          "answer": 1,
+          "explanation": "Dev has its own fabric bar and its own array stack — full storage isolation in current state.",
+          "reinforce": "Compare the short Dev FC Fabric bar and single Dev array to the Prod/DMZ side.",
+          "objectIds": ["fabric-dev", "array-dev"]
+        },
+        {
+          "id": "kc-iv-4",
+          "stem": "What problem does this drawing establish for a VCF design?",
+          "options": [
+            "Already one consolidated private-cloud operating model",
+            "Independent siloed vSphere environments that a future-state design must address",
+            "A finished stretched cluster across Albany",
+            "That BGP is unsupported on the underlay"
+          ],
+          "answer": 1,
+          "explanation": "The slide is titled Current State: Independent vSphere Environments — three silos with dedicated management.",
+          "reinforce": "Hold this drawing against the Business Initiatives map: silos today vs one operating model tomorrow.",
+          "objectIds": ["env-prod", "env-dmz", "env-dev", "vcenter-per-env"]
+        }
+      ]
+    },
+    {
+      "id": "fig-dc-topology",
+      "title": "Current State: Data Center Topology",
+      "subtitle": "Rainpole San Jose L3 spine-leaf fabric and DCI latencies",
+      "image": "data/figures/fig-dc-topology.png",
+      "sourceSlide": 9,
+      "moduleIds": ["mod4"],
+      "primer": "This drawing is the physical underlay you must read before networking design decisions. San Jose is L3 spine-leaf, dual-homed leaves to dual spines, VXLAN-capable, with OSPF and BGP. DCI uses redundant dark fibre: 25 ms to Salt Lake and 80 ms to Albany — numbers that matter for sync vs async site design.",
+      "objects": [
+        {
+          "id": "site-sj",
+          "name": "San Jose DC",
+          "what": "The data center this fabric drawing represents.",
+          "why": "Site context for all leaf/spine and DCI statements on the slide."
+        },
+        {
+          "id": "spine01",
+          "name": "Spine01",
+          "what": "One of two spine switches at the core of the L3 fabric.",
+          "why": "Every leaf uplinks to both spines for fabric redundancy."
+        },
+        {
+          "id": "spine02",
+          "name": "Spine02",
+          "what": "Second spine switch, peer to Spine01.",
+          "why": "Dual-spine design; a single spine would be a fabric SPOF in this model."
+        },
+        {
+          "id": "leaves",
+          "name": "Leaf01–Leaf06 and Leaf-n",
+          "what": "Top-of-rack / leaf switches; drawn in pairs per rack, with Leaf-n showing scale-out.",
+          "why": "Leaves are where racks attach; they dual-home to both spines."
+        },
+        {
+          "id": "racks",
+          "name": "Rack 1, Rack 2, Rack 3, Rack n",
+          "what": "Rack groupings under leaf pairs, with server icons in each rack.",
+          "why": "Shows multi-rack scale and that the pattern repeats to Rack n."
+        },
+        {
+          "id": "server-dual-home",
+          "name": "Servers dual-homed to rack leaves",
+          "what": "Hosts in a rack connect to both leaves in that rack.",
+          "why": "Host NIC redundancy is to the leaf pair, not directly to the spines."
+        },
+        {
+          "id": "leaf-spine-mesh",
+          "name": "Leaf-to-both-spines uplinks",
+          "what": "Lines from each leaf to Spine01 and Spine02.",
+          "why": "Classic L3 spine-leaf: east-west via spines, redundant paths."
+        },
+        {
+          "id": "l3-arch",
+          "name": "L3 Spine-and-Leaf architecture (callout)",
+          "what": "Text states Rainpole fabric is L3 spine-leaf.",
+          "why": "This is the underlay model VCF overlay expects; it is usually a retain-and-validate constraint."
+        },
+        {
+          "id": "routing",
+          "name": "OSPF and BGP supported",
+          "what": "Routing protocols called out for in-fabric and outside connectivity.",
+          "why": "BGP matters later for NSX Edge uplinks; OSPF/BGP show the fabric is a routed L3 design."
+        },
+        {
+          "id": "vxlan",
+          "name": "VXLAN-capable fabric",
+          "what": "Callout that the physical fabric can carry VXLAN.",
+          "why": "Underlay readiness signal for overlay designs (still must prove MTU/path)."
+        },
+        {
+          "id": "dci",
+          "name": "DCI — redundant dark fibre",
+          "what": "San Jose interconnects to other DCs over redundant dark fibre.",
+          "why": "Physical site coupling exists; latency numbers decide sync options."
+        },
+        {
+          "id": "lat-slc",
+          "name": "Latency to Salt Lake — 25 ms",
+          "what": "Stated DCI latency from San Jose to Salt Lake.",
+          "why": "Far above typical sync vSAN/site limits (~5 ms RTT). Treat as async/backup territory unless other evidence appears."
+        },
+        {
+          "id": "lat-alb",
+          "name": "Latency to Albany — 80 ms",
+          "what": "Stated DCI latency from San Jose to Albany.",
+          "why": "Even higher latency — not a sync stretch candidate from this drawing alone."
+        }
+      ],
+      "facts": [
+        "Architecture is L3 spine-leaf at San Jose DC.",
+        "Two spines: Spine01 and Spine02.",
+        "Leaves dual-home to both spines; servers dual-home to rack leaf pairs.",
+        "OSPF and BGP are supported; fabric is VXLAN-capable.",
+        "DCI via redundant dark fibre: 25 ms to Salt Lake, 80 ms to Albany."
+      ],
+      "checks": [
+        {
+          "id": "kc-topo-1",
+          "stem": "What underlay architecture does this drawing show for San Jose?",
+          "options": [
+            "Layer 2 stretched campus with a single core",
+            "L3 Spine-and-Leaf",
+            "Hub-and-spoke WAN only",
+            "Server-to-spine direct attach with no leaves"
+          ],
+          "answer": 1,
+          "explanation": "The callout and the Spine01/02 + Leaf01…n drawing are classic L3 spine-leaf.",
+          "reinforce": "Read the first bullet on the right and match it to the spine/leaf icons.",
+          "objectIds": ["l3-arch", "spine01", "spine02", "leaves"]
+        },
+        {
+          "id": "kc-topo-2",
+          "stem": "How do leaf switches connect to the spines in this drawing?",
+          "options": [
+            "Each leaf connects to only one spine",
+            "Each leaf dual-homes to Spine01 and Spine02",
+            "Leaves connect only to other leaves, never to spines",
+            "Only Rack 1 leaves connect to spines"
+          ],
+          "answer": 1,
+          "explanation": "The mesh of lines shows every leaf uplinking to both spines.",
+          "reinforce": "Trace lines from Leaf01 upward — they reach both Spine01 and Spine02.",
+          "objectIds": ["leaf-spine-mesh", "leaves", "spine01", "spine02"]
+        },
+        {
+          "id": "kc-topo-3",
+          "stem": "Which statements does the slide assert about protocols and overlay readiness?",
+          "options": [
+            "Only static routing; not VXLAN-capable",
+            "OSPF and BGP supported; fabric is VXLAN-capable",
+            "BGP only to Albany; no OSPF; no VXLAN",
+            "AppleTalk and IPX; Geneve only on spines"
+          ],
+          "answer": 1,
+          "explanation": "Right-side bullets list OSPF and BGP support and that the physical fabric is VXLAN-capable.",
+          "reinforce": "Read bullets 2 and 3 on the right panel.",
+          "objectIds": ["routing", "vxlan"]
+        },
+        {
+          "id": "kc-topo-4",
+          "stem": "From this drawing alone, what do the Salt Lake (25 ms) and Albany (80 ms) figures imply for sync site designs?",
+          "options": [
+            "Both sites are within a typical 5 ms sync RTT budget",
+            "Latencies are far above typical sync limits, so sync stretch is not supported by these numbers",
+            "80 ms is fine for sync; 25 ms is not",
+            "Latency is irrelevant because dark fibre is redundant"
+          ],
+          "answer": 1,
+          "explanation": "25 ms and 80 ms are well above common synchronous cross-site limits. Redundant dark fibre is not the same as sync-capable latency.",
+          "reinforce": "Read the DCI bullet: redundant dark fibre plus the two latency numbers. Keep those for later stretch questions.",
+          "objectIds": ["dci", "lat-slc", "lat-alb"]
+        }
+      ]
+    },
+    {
+      "id": "fig-logical-design-template",
+      "title": "Logical Design Template",
+      "subtitle": "Modern Private Cloud Capability map",
+      "image": "data/figures/fig-logical-design-template.png",
+      "sourceSlide": 22,
+      "moduleIds": ["mod3", "mod9", "mod10"],
+      "primer": "This drawing is the target logical capability map. Consumers sit above integrations; consumption/services, operations, and virtualized infrastructure stack in the center; security and data-protection pillars run the sides; modern hardware is the base. Use it to place every later design decision in the correct layer.",
+      "objects": [
+        {
+          "id": "consumers",
+          "name": "Multi-Tenant Consumers — LOBs, Devs/SREs, Platform Teams",
+          "what": "Top dotted box with three consumer personas.",
+          "why": "Design starts from who consumes the platform, not from a SKU."
+        },
+        {
+          "id": "integrations",
+          "name": "Integrations and 3rd Party Ecosystem",
+          "what": "Full-width bar under consumers.",
+          "why": "External tools and partners plug in above the private-cloud stack."
+        },
+        {
+          "id": "consumption",
+          "name": "Consumption and Services",
+          "what": "Self-Service Portal; API|CLI|CI/CD; Infra-as-Code; Data/App Runtime/AI-ML/LBaaS services; IaaS|CaaS|PaaS|XaaS bar.",
+          "why": "How users request and run services — distinct from Operations."
+        },
+        {
+          "id": "ops",
+          "name": "Operations",
+          "what": "Fleet management, Performance Optimization, Visibility/Observability, Analytics/Reporting, Cost Efficiency, Capacity, Configuration Management.",
+          "why": "Day-2 control plane capabilities live here, not in the consumer pills."
+        },
+        {
+          "id": "vi",
+          "name": "Virtualized Infrastructure — Compute, Storage, Network",
+          "what": "Bottom center triad on which higher services run.",
+          "why": "Classic VI layer; still above Modern Hardware."
+        },
+        {
+          "id": "sec-pillar",
+          "name": "Security Governance and Compliance pillar",
+          "what": "Identity/RBAC, Auditing/SIEM, Constraint-Based Management, Data Governance, Compliance Enforcement.",
+          "why": "Cross-cutting left pillar — not a single product box in the center stack."
+        },
+        {
+          "id": "dp-pillar",
+          "name": "Data Protection and Recovery pillar",
+          "what": "Data Protection, Disaster Recovery, Disaster Avoidance, Ransomware Recovery.",
+          "why": "Cross-cutting right pillar for resilience and recovery outcomes."
+        },
+        {
+          "id": "hardware",
+          "name": "Modern Hardware",
+          "what": "Foundation bar under the entire stack.",
+          "why": "Physical substrate; logical capabilities sit above it."
+        },
+        {
+          "id": "delivery-models",
+          "name": "IaaS | CaaS | PaaS | XaaS",
+          "what": "Service delivery models inside Consumption and Services.",
+          "why": "Names the consumption models the platform must offer."
+        }
+      ],
+      "facts": [
+        "Consumers: LOBs, Devs and SREs, Platform Teams.",
+        "Center stack: Consumption and Services → Operations → Virtualized Infrastructure.",
+        "Side pillars: Security Governance and Compliance; Data Protection and Recovery.",
+        "Base: Modern Hardware.",
+        "Consumption includes IaaS|CaaS|PaaS|XaaS and self-service/API/IaC entry points."
+      ],
+      "checks": [
+        {
+          "id": "kc-ldt-1",
+          "stem": "Which personas appear in the Multi-Tenant Consumers box?",
+          "options": [
+            "Spine01, Leaf01, Rack 1",
+            "LOBs, Devs and SREs, Platform Teams",
+            "Only Production and DMZ",
+            "Only Service X/Y/Z"
+          ],
+          "answer": 1,
+          "explanation": "The top dotted region lists LOBs, Devs and SREs, and Platform Teams.",
+          "reinforce": "Read the three black pills at the top of the template.",
+          "objectIds": ["consumers"]
+        },
+        {
+          "id": "kc-ldt-2",
+          "stem": "Where do Fleet management and Capacity Management belong on this template?",
+          "options": [
+            "In the Operations band",
+            "In Modern Hardware only",
+            "In the consumer pills",
+            "Only in the Data Protection pillar"
+          ],
+          "answer": 0,
+          "explanation": "Those capabilities are drawn inside the Operations section of the center stack.",
+          "reinforce": "Find the Operations band (gauge icon) and read its green/teal buttons.",
+          "objectIds": ["ops"]
+        },
+        {
+          "id": "kc-ldt-3",
+          "stem": "Identity and RBAC appears in which part of the drawing?",
+          "options": [
+            "Virtualized Infrastructure next to Storage",
+            "Security Governance and Compliance pillar",
+            "Only under Modern Hardware",
+            "Only as a Salt Lake DCI label"
+          ],
+          "answer": 1,
+          "explanation": "Identity and RBAC is the top item in the left Security Governance and Compliance pillar.",
+          "reinforce": "Scan the left shield pillar from top to bottom.",
+          "objectIds": ["sec-pillar"]
+        },
+        {
+          "id": "kc-ldt-4",
+          "stem": "What sits directly under Virtualized Infrastructure (Compute/Storage/Network) on this template?",
+          "options": [
+            "Business Initiatives",
+            "Modern Hardware",
+            "Assumptions",
+            "Leaf-n only"
+          ],
+          "answer": 1,
+          "explanation": "The black foundation bar is Modern Hardware — the physical base of the capability map.",
+          "reinforce": "Look at the bottom-most bar inside the main grey container.",
+          "objectIds": ["vi", "hardware"]
+        }
+      ]
+    }
+  ]
+}

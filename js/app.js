@@ -1,7 +1,7 @@
 /* ==========================================================================
    app.js — hash router, view rendering and interaction wiring.
 
-   Routes: #study  #study/<modId>  #quiz  #quiz/<modId>  #exam  #delta  #progress
+   Routes: #home  #study  #study/<modId>  #course/<modId>  #quiz  #exam  #delta  #progress
    ========================================================================== */
 
 (function () {
@@ -22,7 +22,7 @@
 
   let quiz = null;   // { filter, question, answered, chosen, correct, asked }
   let exam = null;   // { phase, ids, answers, index, endsAt, timerId, startedAt, result }
-  let course = null; // { moduleId, index }
+  let course = null; // { moduleId, index, cleared: { [sectionId]: true }, check: { chosen, wrong } }
 
   /* ====================================================================== */
   /* Helpers                                                                */
@@ -179,7 +179,7 @@
   });
 
   function setActiveNav(section) {
-    const active = section === 'course' ? 'study' : section;
+    const active = section === 'course' ? 'study' : (section || 'home');
     document.querySelectorAll('.nav-link').forEach(link => {
       link.classList.toggle('active', link.dataset.section === active);
       if (link.dataset.section === active) link.setAttribute('aria-current', 'page');
@@ -191,6 +191,36 @@
     const p = QuizEngine.getProgress();
     document.getElementById('sidebarDue').textContent = String(p.dueToday);
     document.getElementById('sidebarMastery').textContent = pct(p.masteryPct);
+  }
+
+  /* ====================================================================== */
+  /* Landing                                                                */
+  /* ====================================================================== */
+
+  function renderHome() {
+    document.body.classList.add('is-landing');
+    view.innerHTML = `
+      <section class="landing" aria-label="VCF-9 AI Trainer">
+        <div class="landing-hero">
+          <img
+            class="landing-art"
+            src="assets/landing-hero-cloud-automation.jpg"
+            alt="Cloud automation fabric — private cloud control plane and orchestrated infrastructure"
+            width="1600"
+            height="1066"
+            decoding="async"
+            fetchpriority="high">
+          <div class="landing-veil" aria-hidden="true"></div>
+          <div class="landing-copy">
+            <p class="landing-brand">VCF-9 AI Trainer</p>
+            <h2 class="landing-title">Design with evidence.<br>Prove it as you go.</h2>
+            <p class="landing-lede">Self-paced VCF 9 Architect training: study the drawings, pass blocking checks, and keep every decision tied to the conceptual model. Optional AI Trainer is bring-your-own API key — the course works fully without one.</p>
+            <div class="landing-actions">
+              <a class="btn btn-primary btn-lg" href="#study">Enter the course</a>
+            </div>
+          </div>
+        </div>
+      </section>`;
   }
 
   /* ====================================================================== */
@@ -226,7 +256,7 @@
 
     view.innerHTML = `
       ${dataNotice()}
-      ${pageHead('Study', 'Modules', 'Each module starts with a short Study clip (what to watch for), then a full Course presentation that teaches the material and points back to those clips.')}
+      ${pageHead('Study', 'Modules', 'Each module starts with a short Study clip (what to watch for), then a full Course with mid-section knowledge checks you must pass before continuing. Module Quiz and the final Exam are separate.')}
       <div class="card-grid">${cards}</div>`;
   }
 
@@ -263,7 +293,7 @@
       <div class="learn-path" role="note">
         <strong>How this works:</strong>
         This Study clip is the primer — what to hang onto.
-        Then open <em>Course</em> for the full presentation. The Course will point back to these clips as you go.
+        Then open <em>Course</em> for the full presentation. Mid-section knowledge checks block Next until you answer correctly (wrong answers reinforce the concept first).
       </div>
 
       <div class="quiz-bar">
@@ -315,8 +345,9 @@
     }
 
     if (!course || course.moduleId !== modId) {
-      course = { moduleId: modId, index: 0 };
+      course = { moduleId: modId, index: 0, cleared: {}, check: null };
     }
+    if (!course.cleared) course.cleared = {};
     if (course.index < 0) course.index = 0;
     if (course.index >= m.course.sections.length) course.index = m.course.sections.length - 1;
 
@@ -341,7 +372,61 @@
          </aside>`
       : '';
 
+    const kc = section.knowledgeCheck;
+    const cleared = !!(kc && course.cleared[section.id]);
+    const blocked = !!(kc && !cleared);
+    const checkState = (course.check && course.check.sectionId === section.id) ? course.check : null;
+
+    let checkBlockHtml = '';
+    if (kc) {
+      const opts = kc.options.map((opt, i) => {
+        let klass = 'option kc-option';
+        let mark = '';
+        if (checkState && checkState.chosen === i) {
+          if (i === kc.answer) { klass += ' is-correct'; mark = '✓'; }
+          else { klass += ' is-wrong'; mark = '✕'; }
+        } else if (cleared && i === kc.answer) {
+          klass += ' is-correct'; mark = '✓';
+        }
+        return `
+          <button type="button" class="${klass}" data-action="course-check" data-index="${i}"
+            ${cleared || checkState ? 'disabled' : ''}>
+            <span class="option-key">${letter(i)}</span>
+            <span class="option-text">${esc(opt)}</span>
+            ${mark ? `<span class="option-mark">${mark}</span>` : ''}
+          </button>`;
+      }).join('');
+
+      let feedback = '';
+      if (cleared || (checkState && checkState.chosen === kc.answer)) {
+        feedback = `
+          <div class="kc-feedback is-ok">
+            <h4>Correct — concept locked in</h4>
+            <p>${esc(kc.explanation || 'You can move on.')}</p>
+          </div>`;
+      } else if (checkState && checkState.chosen >= 0 && checkState.chosen !== kc.answer) {
+        feedback = `
+          <div class="kc-feedback is-bad">
+            <h4>Not yet — reinforce, then retry</h4>
+            <p class="kc-reinforce">${esc(kc.reinforce || 'Re-read this section and the Study clip callout above, then try again.')}</p>
+            <button type="button" class="btn btn-sm btn-primary" data-action="course-check-retry">Try again</button>
+          </div>`;
+      }
+
+      checkBlockHtml = `
+        <section class="kc-block" aria-label="Knowledge check">
+          <div class="kc-head">
+            <span class="kc-badge">Knowledge check</span>
+            <span class="kc-note">${cleared ? 'Passed — you may continue' : 'Must answer correctly before Next'}</span>
+          </div>
+          <p class="kc-stem">${esc(kc.stem)}</p>
+          <div class="options kc-options">${opts}</div>
+          ${feedback}
+        </section>`;
+    }
+
     const isLast = idx === sections.length - 1;
+    const nextDisabled = blocked ? 'disabled' : '';
 
     view.innerHTML = `
       <a class="backlink" href="#study/${encodeURIComponent(m.id)}">← Study clip</a>
@@ -355,16 +440,67 @@
         <h3 class="course-section-title">${esc(section.title)}</h3>
         ${callbackBlock}
         <div class="course-body">${paras}</div>
+        ${checkBlockHtml}
       </article>
 
       <div class="course-nav">
         <button type="button" class="btn" data-action="course-prev" ${idx === 0 ? 'disabled' : ''}>Previous</button>
         <span class="course-pos">${idx + 1} / ${sections.length}</span>
         ${isLast
-          ? `<a class="btn btn-primary" href="#quiz/${encodeURIComponent(m.id)}">Done — Quiz</a>`
-          : `<button type="button" class="btn btn-primary" data-action="course-next">Next section</button>`}
+          ? (blocked
+              ? `<button type="button" class="btn btn-primary" disabled>Pass check to finish</button>`
+              : `<a class="btn btn-primary" href="#quiz/${encodeURIComponent(m.id)}">Done — Quiz</a>`)
+          : `<button type="button" class="btn btn-primary" data-action="course-next" ${nextDisabled}>Next section</button>`}
       </div>
-      <p class="hint course-hint">One section at a time so you keep focus. Study clips appear when this section hits something you were told to watch for.</p>`;
+      <p class="hint course-hint">Knowledge checks are VMware-style mid-module blockers: wrong answers reinforce the concept; you cannot advance until correct. The comprehensive Exam at the end of the course is separate.</p>`;
+  }
+
+  function sectionCheckCleared(section) {
+    if (!course || !section) return true;
+    if (!section.knowledgeCheck) return true;
+    return !!course.cleared[section.id];
+  }
+
+  function canAdvanceCourse() {
+    if (!course) return false;
+    const m = DataLoader.getModule(course.moduleId);
+    if (!m || !m.course) return false;
+    return sectionCheckCleared(m.course.sections[course.index]);
+  }
+
+  function answerCourseCheck(index) {
+    if (!course) return;
+    const m = DataLoader.getModule(course.moduleId);
+    if (!m) return;
+    const section = m.course.sections[course.index];
+    const kc = section && section.knowledgeCheck;
+    if (!kc || course.cleared[section.id]) return;
+    if (course.check && course.check.sectionId === section.id) return;
+
+    course.check = { sectionId: section.id, chosen: index };
+    if (index === kc.answer) course.cleared[section.id] = true;
+    renderCourse(course.moduleId);
+  }
+
+  function retryCourseCheck() {
+    if (!course) return;
+    course.check = null;
+    renderCourse(course.moduleId);
+  }
+
+  function advanceCourse() {
+    if (!course || !canAdvanceCourse()) return false;
+    const m = DataLoader.getModule(course.moduleId);
+    if (!m || !m.course) return false;
+    const max = m.course.sections.length - 1;
+    if (course.index < max) {
+      course.index += 1;
+      course.check = null;
+      renderCourse(course.moduleId);
+      return true;
+    }
+    location.hash = `#quiz/${encodeURIComponent(m.id)}`;
+    return true;
   }
 
   /* ====================================================================== */
@@ -927,7 +1063,7 @@
     const raw = location.hash.replace(/^#\/?/, '');
     const [section, ...rest] = raw.split('/');
     return {
-      section: section || 'study',
+      section: section || 'home',
       param: rest.length ? decodeURIComponent(rest.join('/')) : ''
     };
   }
@@ -938,10 +1074,16 @@
     /* Leaving the exam mid-run must not leave a timer ticking. */
     if (section !== 'exam') stopExamTimer();
 
-    setActiveNav(section);
+    document.body.classList.toggle('is-landing', section === 'home' || section === '');
+
+    setActiveNav(section === '' ? 'home' : section);
     refreshSidebarStats();
 
     switch (section) {
+      case 'home':
+      case '':
+        renderHome();
+        break;
       case 'study':
         param ? renderModule(param) : renderStudy();
         break;
@@ -962,7 +1104,7 @@
         renderProgress();
         break;
       default:
-        location.replace('#study');
+        location.replace('#home');
         return;
     }
 
@@ -986,15 +1128,20 @@
       case 'quiz-answer': answerQuiz(index); break;
       case 'quiz-next':   nextQuizQuestion(); break;
       case 'course-prev':
-        if (course) { course.index = Math.max(0, course.index - 1); renderCourse(course.moduleId); }
-        break;
-      case 'course-next':
         if (course) {
-          const m = DataLoader.getModule(course.moduleId);
-          const max = m && m.course ? m.course.sections.length - 1 : 0;
-          course.index = Math.min(max, course.index + 1);
+          course.index = Math.max(0, course.index - 1);
+          course.check = null;
           renderCourse(course.moduleId);
         }
+        break;
+      case 'course-next':
+        advanceCourse();
+        break;
+      case 'course-check':
+        answerCourseCheck(index);
+        break;
+      case 'course-check-retry':
+        retryCourseCheck();
         break;
       case 'exam-start':  startExam(); break;
       case 'exam-answer': answerExam(index); break;
@@ -1031,7 +1178,7 @@
         location.hash = `#study/${encodeURIComponent(parseHash().param)}`;
         return;
       }
-      if (section !== 'study') { location.hash = '#study'; }
+      if (section !== 'home') { location.hash = '#home'; }
       return;
     }
 
@@ -1041,6 +1188,14 @@
       if (section === 'quiz' && quiz && quiz.question && !quiz.answered && idx < quiz.question.options.length) {
         event.preventDefault();
         answerQuiz(idx);
+      } else if (section === 'course' && course) {
+        const m = DataLoader.getModule(course.moduleId);
+        const s = m && m.course && m.course.sections[course.index];
+        const kc = s && s.knowledgeCheck;
+        if (kc && !course.cleared[s.id] && !(course.check && course.check.sectionId === s.id) && idx < kc.options.length) {
+          event.preventDefault();
+          answerCourseCheck(idx);
+        }
       } else if (section === 'exam' && exam && exam.phase === 'running') {
         const q = DataLoader.getQuestion(exam.ids[exam.index]);
         if (q && idx < q.options.length) {
@@ -1056,15 +1211,9 @@
         event.preventDefault();
         nextQuizQuestion();
       } else if (section === 'course' && course) {
+        if (!canAdvanceCourse()) return;
         event.preventDefault();
-        const m = DataLoader.getModule(course.moduleId);
-        const max = m && m.course ? m.course.sections.length - 1 : 0;
-        if (course.index < max) {
-          course.index += 1;
-          renderCourse(course.moduleId);
-        } else if (m) {
-          location.hash = `#quiz/${encodeURIComponent(m.id)}`;
-        }
+        advanceCourse();
       } else if (section === 'exam' && exam && exam.phase === 'running' && exam.index < exam.ids.length - 1) {
         event.preventDefault();
         gotoExamQuestion(exam.index + 1);
@@ -1086,7 +1235,7 @@
 
   DataLoader.load()
     .then(() => {
-      if (!location.hash) location.replace('#study');
+      if (!location.hash) location.replace('#home');
       route();
     })
     .catch(err => {

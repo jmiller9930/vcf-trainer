@@ -1,6 +1,6 @@
 /* VCF 9 Trainer — service worker: cache-first offline shell. */
 
-const CACHE_NAME = 'vcf-trainer-v4';
+const CACHE_NAME = 'vcf-trainer-v6';
 
 /* Files the app cannot run without — a failure here fails the install. */
 const CORE_ASSETS = [
@@ -13,13 +13,20 @@ const CORE_ASSETS = [
   './js/app.js',
   './data/modules.json',
   './data/questions.json',
-  './data/delta91.json'
+  './data/delta91.json',
+  './data/figures.json'
 ];
 
 /* Nice-to-have files; cached individually so a missing icon can't break install. */
 const OPTIONAL_ASSETS = [
   './icons/icon-192.png',
-  './icons/icon-512.png'
+  './icons/icon-512.png',
+  './assets/landing-hero-cloud-automation.jpg',
+  './data/figures/fig-design-decision-process.png',
+  './data/figures/fig-business-initiatives.png',
+  './data/figures/fig-independent-vsphere.png',
+  './data/figures/fig-dc-topology.png',
+  './data/figures/fig-logical-design-template.png'
 ];
 
 self.addEventListener('install', event => {

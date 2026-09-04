@@ -89,6 +89,11 @@
       "primer": "After this module you should explain the mechanism without notes, then defend each design choice from evidence — not from a memorized letter. Watch for these while you take the Course: RCAR Framework; Functional and Non-Functional Requirements; AMPRS Quality Lens; VCF Planning and Preparation Workbook.",
       "highlights": [
         {
+          "id": "mod3-h-drawings",
+          "title": "Course drawings in this module",
+          "text": "You will study these drawings object-by-object and pass local knowledge checks before advancing: Visual Design Decision Process, Business Initiatives Capability Map, Current State: Independent vSphere Environments, Logical Design Template."
+        },
+        {
           "id": "mod3-h-c1",
           "title": "RCAR Framework",
           "text": "The exam gives you a customer statement and asks which RCAR category it belongs to. Learn the discriminators: 'we already have' or 'we must use' or 'we cannot change' equals constraint; 'we expect' or 'we believe' or 'traffic will grow' equals assumption; 'the business needs' equals requirement; 'if X happens we lose Y' equals risk. Existing infrastructure is always a constraint, never a requirement. A projection about future growth is always an assumption, never a requirement."
@@ -139,6 +144,55 @@
           "highlightIds": [
             "mod3-h-c1",
             "mod3-h-c2"
+          ],
+          "knowledgeCheck": {
+            "stem": "What must drive every logical design decision?",
+            "options": [
+              "preferred product",
+              "The conceptual model",
+              "The instructor's example",
+              "The cheapest hardware"
+            ],
+            "answer": 1,
+            "explanation": "All design decisions are driven by the conceptual model. Product preference, examples and cost are not evidence; the requirements, constraints, assumptions and risks captured in the conceptual model are.",
+            "reinforce": "Study clip — RCAR Framework: The exam gives you a customer statement and asks which RCAR category it belongs to. Learn the discriminators: 'we already have' or 'we must use' or 'we cannot change' equals constraint; 'we expect' or 'we believe' or 'traffic will grow' equals assumption; 'the business needs' equals requirement; 'if X happens we lose Y' equals risk. Existing infrastructure is always a constraint, never a requirement. A projection about future growth is always an assumption, never a requirement.",
+            "sourceQuestionId": "q1"
+          }
+        },
+        {
+          "id": "mod3-s-fig-design-decision-process",
+          "title": "Drawing: Visual Design Decision Process",
+          "body": "Study this course drawing in detail. Every labeled object below must make sense before you continue.\n\nThis drawing is the rule for every later design decision in the course. Conceptual inputs (RCAR) feed a Design Decision; the decision is only complete when it carries Justification + AMPRS. The red banner is not decoration: all design decisions are driven by the Conceptual Model.\n\nGrading is local against the authored fact sheet for this drawing — no AI gateway is required.",
+          "figureId": "fig-design-decision-process",
+          "highlightIds": [
+            "mod3-h-drawings"
+          ]
+        },
+        {
+          "id": "mod3-s-fig-business-initiatives",
+          "title": "Drawing: Business Initiatives Capability Map",
+          "body": "Study this course drawing in detail. Every labeled object below must make sense before you continue.\n\nThis drawing is top-down: Business Initiatives → Use Cases → Services/Capabilities → Private Cloud Operating Model. It explains why VCF exists for Rainpole: technology is justified by business initiatives, not the reverse.\n\nGrading is local against the authored fact sheet for this drawing — no AI gateway is required.",
+          "figureId": "fig-business-initiatives",
+          "highlightIds": [
+            "mod3-h-drawings"
+          ]
+        },
+        {
+          "id": "mod3-s-fig-independent-vsphere",
+          "title": "Drawing: Current State: Independent vSphere Environments",
+          "body": "Study this course drawing in detail. Every labeled object below must make sense before you continue.\n\nThis drawing is the as-is problem statement: three independent vSphere environments with dedicated vCenters. Storage is partly shared at the fabric layer for Prod/DMZ but arrays stay dedicated; Development is fully isolated. VCF design work starts from this siloed current state.\n\nGrading is local against the authored fact sheet for this drawing — no AI gateway is required.",
+          "figureId": "fig-independent-vsphere",
+          "highlightIds": [
+            "mod3-h-drawings"
+          ]
+        },
+        {
+          "id": "mod3-s-fig-logical-design-template",
+          "title": "Drawing: Logical Design Template",
+          "body": "Study this course drawing in detail. Every labeled object below must make sense before you continue.\n\nThis drawing is the target logical capability map. Consumers sit above integrations; consumption/services, operations, and virtualized infrastructure stack in the center; security and data-protection pillars run the sides; modern hardware is the base. Use it to place every later design decision in the correct layer.\n\nGrading is local against the authored fact sheet for this drawing — no AI gateway is required.",
+          "figureId": "fig-logical-design-template",
+          "highlightIds": [
+            "mod3-h-drawings"
           ]
         },
         {
@@ -147,7 +201,20 @@
           "body": "RCAR is the classification scheme used to sort raw customer input into four buckets: Requirements (what the solution must do or must achieve), Constraints (boundaries imposed on the design that you cannot change), Assumptions (statements believed true but not yet validated), and Risks (conditions that could cause the design to fail its requirements). It sits at the very front of the design process, before any logical design work begins, and its output is the numbered evidence set (BRxx, Cxx, Axx, Rxx) that the rest of the design cites.\n\nThe input is unstructured discovery material: interview notes, workshop output, current-state assessment reports, capacity data. You read each statement and ask a sequence of tests. Does it describe an outcome the business needs? It is a requirement. Does it limit your freedom of choice (existing hardware, existing network, budget, regulation, skills)? It is a constraint. Is it stated as fact but unverified, or is it a projection about the future? It is an assumption, and it must be logged for validation. Would it, if true, threaten a requirement? It is a risk, and it needs a mitigation owner. Each item receives a stable identifier. Assumptions are the highest-value bucket because each one is a validation task you owe the customer, and an unvalidated assumption that later proves false is the single most common cause of a failed design.\n\nBroadcom's design methodology insists on RCAR because architecture is a defensibility exercise as much as an engineering one. Without classification, designers conflate a preference with a requirement and end up defending a product choice rather than a business outcome. With classification, every design decision can be traced to a specific identifier, alternatives can be rejected on evidentiary grounds, and the customer can see exactly which of their statements drove which piece of the build. Use RCAR at the start of every engagement and revisit it whenever new discovery data arrives.",
           "highlightIds": [
             "mod3-h-c1"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "The customer states that the new platform must run on the existing Layer 3 spine-leaf network because there is no budget to replace it. How should item C02 be classified?",
+            "options": [
+              "functional requirement",
+              "An assumption to validate",
+              "constraint",
+              "risk to be mitigated"
+            ],
+            "answer": 2,
+            "explanation": "Existing infrastructure that must be reused is a boundary on the designer's freedom of choice, which is the definition of a constraint. In the case study the existing network is recorded as constraint C02.",
+            "reinforce": "Study clip — RCAR Framework: The exam gives you a customer statement and asks which RCAR category it belongs to. Learn the discriminators: 'we already have' or 'we must use' or 'we cannot change' equals constraint; 'we expect' or 'we believe' or 'traffic will grow' equals assumption; 'the business needs' equals requirement; 'if X happens we lose Y' equals risk. Existing infrastructure is always a constraint, never a requirement. A projection about future growth is always an assumption, never a requirement.",
+            "sourceQuestionId": "q2"
+          }
         },
         {
           "id": "mod3-s-c2",
@@ -155,7 +222,20 @@
           "body": "A functional requirement states what the solution must do: a capability, a behaviour, a feature that either exists or does not. A non-functional requirement states how well the solution must do it: the quality level, expressed as a measurable target such as availability percentage, latency ceiling, recovery time objective, or throughput floor. Both live inside the Requirements bucket of RCAR, and together they define the acceptance criteria for the design.\n\nDecomposition is the mechanism. A single business requirement such as 'support the developer platform' is too coarse to design against, so you split it. The functional side yields items like 'provide self-service VM provisioning' and 'provide Kubernetes cluster provisioning'. The non-functional side yields items like 'provision within 10 minutes at the 95th percentile' and 'sustain 99.9 percent platform availability'. The functional items drive which components you select; the non-functional items drive how you configure, size and make them resilient. A non-functional requirement without a number is not yet a requirement, it is an aspiration, and part of the architect's job is to force the number out of the customer.\n\nBroadcom separates the two because they consume different design levers. You satisfy functional requirements by choosing components; you satisfy non-functional requirements by choosing topology, redundancy, sizing and policy. If you do not separate them you will build something that technically has all the features and still fails acceptance because nobody quantified 'fast' or 'highly available'. The non-functional set is also what the AMPRS lens evaluates, so a design with weak non-functional requirements cannot be assessed for trade-offs.",
           "highlightIds": [
             "mod3-h-c2"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "The customer says development workload will triple over the next two years. How should this statement be classified?",
+            "options": [
+              "An assumption",
+              "functional requirement",
+              "constraint",
+              "design decision"
+            ],
+            "answer": 0,
+            "explanation": "A forward-looking projection is believed but not yet verified, so it is an assumption and must be logged for validation. The requirement is to support the resulting capacity, not the growth projection itself.",
+            "reinforce": "Study clip — Functional and Non-Functional Requirements: Non-functional equals quality level equals a measurable target. If the answer option mentions a percentage, a time limit, a latency figure or a throughput figure, it is non-functional. If it names a capability or feature, it is functional. Expect a question that hands you a mixed list and asks you to sort it.",
+            "sourceQuestionId": "q3"
+          }
         },
         {
           "id": "mod3-s-c3",
@@ -188,7 +268,20 @@
           "highlightIds": [
             "mod3-h-f1",
             "mod3-h-f2"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "What does a non-functional requirement describe?",
+            "options": [
+              "capability the solution must provide",
+              "The quality level the solution must achieve",
+              "boundary the designer cannot change",
+              "condition that could cause failure"
+            ],
+            "answer": 1,
+            "explanation": "A functional requirement states what the solution does; a non-functional requirement states how well it must do it, expressed as a measurable target such as availability percentage, latency ceiling or recovery time objective.",
+            "reinforce": "Study clip — Must know 1: RCAR equals Requirements, Constraints, Assumptions, Risks.",
+            "sourceQuestionId": "q4"
+          }
         },
         {
           "id": "mod3-s-91",
@@ -360,6 +453,11 @@
       "primer": "After this module you can explain underlay vs overlay without notes, prove MTU correctly, and apply rack/fabric decision rules to new evidence — not recite DD-402 = B. Watch for these while you take the Course: Layer 3 Spine-Leaf Underlay; VXLAN and Geneve Overlay; NSX; vSphere Distributed Switch (VDS).",
       "highlights": [
         {
+          "id": "mod4-h-drawings",
+          "title": "Course drawings in this module",
+          "text": "You will study these drawings object-by-object and pass local knowledge checks before advancing: Current State: Data Center Topology."
+        },
+        {
           "id": "mod4-h-c1",
           "title": "Layer 3 Spine-Leaf Underlay",
           "text": "Constraint + already L3 spine-leaf ⇒ retain and validate overlay. Multi-rack needs per-rack TEP VLAN/subnet + HA ToR gateway."
@@ -410,6 +508,28 @@
           "highlightIds": [
             "mod4-h-c1",
             "mod4-h-c2"
+          ],
+          "knowledgeCheck": {
+            "stem": "Measurements show peak throughput of 9 Gbps on 10 Gb host uplinks. What does this tell the architect?",
+            "options": [
+              "The links are correctly sized with room to spare",
+              "The links are underutilised and could be downgraded",
+              "There is almost no headroom for burst, failover or growth",
+              "The measurement is invalid because peaks are not meaningful"
+            ],
+            "answer": 2,
+            "explanation": "A 9 Gbps peak on a 10 Gb link is roughly 90 percent utilisation, leaving nothing for traffic bursts, uplink failover onto a single link, or the projected workload growth. Nameplate speed is not usable bandwidth.",
+            "reinforce": "Study clip — Layer 3 Spine-Leaf Underlay: Constraint + already L3 spine-leaf ⇒ retain and validate overlay. Multi-rack needs per-rack TEP VLAN/subnet + HA ToR gateway.",
+            "sourceQuestionId": "q8"
+          }
+        },
+        {
+          "id": "mod4-s-fig-dc-topology",
+          "title": "Drawing: Current State: Data Center Topology",
+          "body": "Study this course drawing in detail. Every labeled object below must make sense before you continue.\n\nThis drawing is the physical underlay you must read before networking design decisions. San Jose is L3 spine-leaf, dual-homed leaves to dual spines, VXLAN-capable, with OSPF and BGP. DCI uses redundant dark fibre: 25 ms to Salt Lake and 80 ms to Albany — numbers that matter for sync vs async site design.\n\nGrading is local against the authored fact sheet for this drawing — no AI gateway is required.",
+          "figureId": "fig-dc-topology",
+          "highlightIds": [
+            "mod4-h-drawings"
           ]
         },
         {
@@ -418,7 +538,20 @@
           "body": "Physical fabric: redundant ToR leaf switches per rack, hosts dual-attached, leaves uplinked to spines. In L3, routing starts at the ToR — each rack has its own subnets.\n\nCreate VLANs per traffic type (host mgmt, VM mgmt, vMotion, vSAN, host TEP, Edge TEP, Edge uplinks) and trunk them to hosts. Multi-rack = per-rack subnet + HA gateway at the leaf; spines route between racks (usually BGP).\n\nRouted fabrics scale and keep failure domains small. Broadcom expects spine-leaf because the overlay supplies logical L2 where needed. If the fabric already exists as a constraint, retain and validate — do not redesign for preference.",
           "highlightIds": [
             "mod4-h-c1"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "The customer has an existing Layer 3 spine-leaf fabric recorded as a constraint. What is the correct networking approach for VCF 9?",
+            "options": [
+              "Replace the fabric with a stretched Layer 2 design",
+              "Retain the Layer 3 spine-leaf underlay and validate that it supports the NSX overlay",
+              "Deploy VCF without an overlay to avoid fabric changes",
+              "Rebuild the fabric to a single-rack topology"
+            ],
+            "answer": 1,
+            "explanation": "Layer 3 spine-leaf is already the topology Broadcom recommends for VCF, and it is a constraint. The work is therefore validation, principally end-to-end MTU on the tunnel endpoint path, per-rack subnets with highly available gateways, and BGP peering capability.",
+            "reinforce": "Study clip — Layer 3 Spine-Leaf Underlay: Constraint + already L3 spine-leaf ⇒ retain and validate overlay. Multi-rack needs per-rack TEP VLAN/subnet + HA ToR gateway.",
+            "sourceQuestionId": "q9"
+          }
         },
         {
           "id": "mod4-s-c2",
@@ -426,7 +559,20 @@
           "body": "Logical network layer: workload Ethernet frames are encapsulated in UDP and carried across the routed underlay. NSX in VCF uses Geneve (VXLAN is often used as the generic term / 9.1 EVPN-VXLAN fabric interop).\n\nEach transport node gets TEP VMkernel(s). Source host wraps frames in Geneve + outer IP/UDP → underlay routes to remote TEP → remote host unwraps. Outer headers need ~100 bytes, so underlay MTU must exceed guest MTU (min 1600, recommend 1700, optimal 9000).\n\nOverlay decouples tenant networks from switch VLAN churn — required for VPC, Supervisor, and Automation self-service. Without proven end-to-end MTU, tunnels fail under load while small pings still “work.”",
           "highlightIds": [
             "mod4-h-c2"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "Why would a design choose the multi-rack Layer 3 vSphere cluster model over a single-rack model?",
+            "options": [
+              "Because it removes the need to configure MTU",
+              "Because it provides rack-level resilience and horizontal scale beyond one rack",
+              "Because it eliminates the need for an NSX Edge cluster",
+              "Because it reduces the number of VLANs required"
+            ],
+            "answer": 1,
+            "explanation": "Multi-rack distributes a cluster's hosts across racks so the loss of a rack does not take the cluster down, and it allows growth beyond one rack's capacity. It increases VLAN and subnet management rather than reducing it, and the benefit depends on the racks being genuinely independent failure domains.",
+            "reinforce": "Study clip — VXLAN and Geneve Overlay: Memorize the MTU ladder (1600/1700/9000) and that one overlay transport zone serves the NSX instance.",
+            "sourceQuestionId": "q10"
+          }
         },
         {
           "id": "mod4-s-c3",
@@ -459,7 +605,20 @@
           "highlightIds": [
             "mod4-h-f1",
             "mod4-h-f2"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "What is the single most important configuration item to validate before the NSX overlay will work correctly?",
+            "options": [
+              "Consistent MTU across the entire tunnel endpoint path",
+              "Identical host firmware versions",
+              "Matching vCenter and NSX build numbers",
+              "DNS reverse lookup for every virtual machine"
+            ],
+            "answer": 0,
+            "explanation": "Geneve encapsulation adds roughly 100 bytes, so every hop on the tunnel endpoint path must carry the larger frame. The floor is 1600 bytes, 1700 is recommended and 9000 is optimal, and physical switches, routers, the VDS, port groups, VMkernel adapters and the NSX global setting must all agree.",
+            "reinforce": "Study clip — Must know 1: The case study existing network is constraint C02; the design retains the L3 spine-leaf underlay rather than replacing it.",
+            "sourceQuestionId": "q11"
+          }
         },
         {
           "id": "mod4-s-dd1",
@@ -651,6 +810,11 @@
       "primer": "After this module you should explain the mechanism without notes, then defend each design choice from evidence — not from a memorized letter. Watch for these while you take the Course: vSAN Express Storage Architecture (ESA); vSAN Original Storage Architecture (OSA); Storage Policy Based Management (SPBM); Storage Policy and Failures To Tolerate (FTT).",
       "highlights": [
         {
+          "id": "mod5-h-drawings",
+          "title": "Course drawings in this module",
+          "text": "You will study these drawings object-by-object and pass local knowledge checks before advancing: Current State: Independent vSphere Environments."
+        },
+        {
           "id": "mod5-h-c1",
           "title": "vSAN Express Storage Architecture (ESA)",
           "text": "Know that ESA is single-tier all-NVMe with no cache and capacity tier split, that it makes erasure coding performant enough to be the default, and that its RAID-5 scheme adapts to host count (2+1 below six hosts, 4+1 at six or more). Recommended minimums are four hosts for FTT=1 RAID-5 and seven hosts for FTT=2 RAID-6, because you want a spare fault domain."
@@ -701,6 +865,28 @@
           "highlightIds": [
             "mod5-h-c1",
             "mod5-h-c2"
+          ],
+          "knowledgeCheck": {
+            "stem": "The management domain will run on new all-NVMe ReadyNodes, and the existing 8 Gbps Fibre Channel SAN is end of life. Which storage model should the management domain use?",
+            "options": [
+              "The existing Fibre Channel SAN",
+              "vSAN OSA",
+              "vSAN ESA",
+              "NFS from a new filer"
+            ],
+            "answer": 2,
+            "explanation": "vSAN ESA is the principal storage model for VCF 9 and suits all-NVMe hardware. It keeps the management plane's storage self-contained and removes any dependency on the retiring SAN. OSA would forgo ESA's performance and efficiency on this hardware.",
+            "reinforce": "Study clip — vSAN Express Storage Architecture (ESA): Know that ESA is single-tier all-NVMe with no cache and capacity tier split, that it makes erasure coding performant enough to be the default, and that its RAID-5 scheme adapts to host count (2+1 below six hosts, 4+1 at six or more). Recommended minimums are four hosts for FTT=1 RAID-5 and seven hosts for FTT=2 RAID-6, because you want a spare fault domain.",
+            "sourceQuestionId": "q12"
+          }
+        },
+        {
+          "id": "mod5-s-fig-independent-vsphere",
+          "title": "Drawing: Current State: Independent vSphere Environments",
+          "body": "Study this course drawing in detail. Every labeled object below must make sense before you continue.\n\nThis drawing is the as-is problem statement: three independent vSphere environments with dedicated vCenters. Storage is partly shared at the fabric layer for Prod/DMZ but arrays stay dedicated; Development is fully isolated. VCF design work starts from this siloed current state.\n\nGrading is local against the authored fact sheet for this drawing — no AI gateway is required.",
+          "figureId": "fig-independent-vsphere",
+          "highlightIds": [
+            "mod5-h-drawings"
           ]
         },
         {
@@ -709,7 +895,20 @@
           "body": "ESA is the current vSAN data path and on-disk format, introduced in vSAN 8 and the default for VCF 9. It is designed for all-NVMe ReadyNode hardware and uses a single-tier device model, with no separate cache and capacity tiers, so every device contributes both performance and capacity.\n\nESA's log-structured file system and log-structured object manager ingest writes into a performance leg and then write full stripes with parity, which is why erasure coding no longer carries the write-amplification penalty it did in OSA. Compression happens once at the top of the stack before data is transmitted, so it saves network as well as capacity. RAID-5 in ESA adapts its scheme to cluster size rather than being fixed at 3+1: below six hosts it uses a 2+1 stripe (1.5x overhead) and at six or more hosts it uses 4+1 (1.25x overhead), readjusting automatically roughly 24 hours after a cluster size change. RAID-6 uses 4+2 for a 1.5x overhead. Because erasure coding performs at mirroring-like levels, Broadcom's guidance is to reserve RAID-1 mirroring for site resilience in stretched clusters and host resilience in two-node clusters.\n\nBroadcom built ESA to remove the historical trade-off between performance and space efficiency: architects previously chose RAID-1 for performance and paid double or triple capacity, or chose erasure coding and paid a write penalty. Removing that trade-off makes space-efficient resilience the default and materially lowers the cost per usable terabyte on all-flash hardware. Choose ESA for any new build on all-NVMe ReadyNodes, which is the normal case in VCF 9.",
           "highlightIds": [
             "mod5-h-c1"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "The only storage evidence available is that 200 TB is currently consumed. Why is this insufficient for sizing?",
+            "options": [
+              "It says nothing about IOPS, latency targets, working-set size, growth rate or resilience overhead",
+              "Consumed capacity is never measurable accurately",
+              "Capacity is irrelevant to vSAN sizing",
+              "Because vSAN sizing depends only on host count"
+            ],
+            "answer": 0,
+            "explanation": "Consumed capacity is one input among several. Sizing also needs the performance profile, the growth rate, and the capacity overhead implied by the chosen failures-to-tolerate policy and data placement scheme, which ranges from 1.25x to 4x.",
+            "reinforce": "Study clip — vSAN Express Storage Architecture (ESA): Know that ESA is single-tier all-NVMe with no cache and capacity tier split, that it makes erasure coding performant enough to be the default, and that its RAID-5 scheme adapts to host count (2+1 below six hosts, 4+1 at six or more). Recommended minimums are four hosts for FTT=1 RAID-5 and seven hosts for FTT=2 RAID-6, because you want a spare fault domain.",
+            "sourceQuestionId": "q13"
+          }
         },
         {
           "id": "mod5-s-c2",
@@ -717,7 +916,20 @@
           "body": "OSA is the classic vSAN architecture, using disk groups in which one cache device fronts several capacity devices. It remains supported in VCF 9 and 9.1 but is the legacy choice, appropriate where hardware is hybrid or SAS/SATA-based rather than all-NVMe.\n\nWrites land in the cache tier and are destaged to capacity, so cache device sizing and failure domain are first-order design concerns: losing a cache device takes its whole disk group offline. RAID-5 in OSA is a fixed 3+1 scheme requiring at least four hosts, giving 1.33x overhead, and erasure coding carries a real write amplification penalty, which is why OSA designs commonly chose RAID-1 mirroring for performance-sensitive workloads and accepted 2x or 3x capacity overhead. The newer efficiency features in 9.1, notably global deduplication and Auto-RAID, are ESA-only.\n\nBroadcom keeps OSA available so that existing hardware and hybrid configurations are not stranded, but new capability lands in ESA. For an architect the practical rule is that OSA is a constraint-driven choice: you pick it because the hardware forces you to, not because the design prefers it.",
           "highlightIds": [
             "mod5-h-c2"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "What does Storage Policy Based Management provide?",
+            "options": [
+              "Per-workload storage policy applied at the virtual machine and virtual disk level",
+              "per-datastore tiering configuration",
+              "replacement for vSAN storage policies",
+              "Automatic array firmware management"
+            ],
+            "answer": 0,
+            "explanation": "SPBM expresses storage requirements as policies attached to virtual machines and individual virtual disks rather than as properties of a datastore. It places objects on compatible storage, instantiates the requested data services, and reports compliance continuously.",
+            "reinforce": "Study clip — vSAN Original Storage Architecture (OSA): The examinable contrast is: OSA has cache plus capacity disk groups, fixed 3+1 RAID-5, and a genuine erasure coding write penalty; ESA is single-tier all-NVMe, adaptive RAID-5, and no meaningful erasure coding penalty. Auto-RAID and global dedup are ESA-only.",
+            "sourceQuestionId": "q14"
+          }
         },
         {
           "id": "mod5-s-c3",
@@ -750,7 +962,20 @@
           "highlightIds": [
             "mod5-h-f1",
             "mod5-h-f2"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "Why does vSAN ESA suit a workload domain that needs differentiated service levels from one cluster?",
+            "options": [
+              "Because it forces a single policy across the whole datastore",
+              "Because it is a scale-out architecture whose service levels are set per workload through policy",
+              "Because it requires no capacity overhead for resilience",
+              "Because it removes the need for a distributed switch"
+            ],
+            "answer": 1,
+            "explanation": "ESA is scale-out and policy-driven, so one cluster can serve workloads with different failures-to-tolerate settings and data placement schemes simultaneously. Resilience still costs capacity, but the level is chosen per workload rather than per datastore.",
+            "reinforce": "Study clip — Must know 1: The existing 8 Gbps Fibre Channel SAN is end of life, which makes retiring external block storage a driver in the case study.",
+            "sourceQuestionId": "q15"
+          }
         },
         {
           "id": "mod5-s-dd1",
@@ -1059,6 +1284,11 @@
       "primer": "After this module you should explain the mechanism without notes, then defend each design choice from evidence — not from a memorized letter. Watch for these while you take the Course: VCF Private Cloud Hierarchy; Fleet Blueprint and Deployment Models; High Availability Appliance Mode; VCF Identity Broker.",
       "highlights": [
         {
+          "id": "mod6-h-drawings",
+          "title": "Course drawings in this module",
+          "text": "You will study these drawings object-by-object and pass local knowledge checks before advancing: Current State: Independent vSphere Environments."
+        },
+        {
           "id": "mod6-h-c1",
           "title": "VCF Private Cloud Hierarchy",
           "text": "Memorise the order: private cloud, fleet, instance, domain, vSphere cluster. Know that fleet-level components (VCF Operations and VCF Automation) live in the management domain of the first instance, and that a fleet has exactly one of each."
@@ -1109,6 +1339,28 @@
           "highlightIds": [
             "mod6-h-c1",
             "mod6-h-c2"
+          ],
+          "knowledgeCheck": {
+            "stem": "The customer operates a single data centre and has no validated second availability zone. Which fleet deployment model should be selected?",
+            "options": [
+              "Multi-region fleet with two VCF Automation instances",
+              "Multi-availability-zone fleet with a witness",
+              "Single-site fleet blueprint with one VCF Operations and one VCF Automation instance",
+              "One fleet per workload domain"
+            ],
+            "answer": 2,
+            "explanation": "With one site and no validated second zone, the single-site centralised management model is correct. It gives the lowest operational complexity and consistent management, and the site-level exposure is recorded as an accepted risk mitigated by backup and recovery.",
+            "reinforce": "Study clip — VCF Private Cloud Hierarchy: Memorise the order: private cloud, fleet, instance, domain, vSphere cluster. Know that fleet-level components (VCF Operations and VCF Automation) live in the management domain of the first instance, and that a fleet has exactly one of each.",
+            "sourceQuestionId": "q16"
+          }
+        },
+        {
+          "id": "mod6-s-fig-independent-vsphere",
+          "title": "Drawing: Current State: Independent vSphere Environments",
+          "body": "Study this course drawing in detail. Every labeled object below must make sense before you continue.\n\nThis drawing is the as-is problem statement: three independent vSphere environments with dedicated vCenters. Storage is partly shared at the fabric layer for Prod/DMZ but arrays stay dedicated; Development is fully isolated. VCF design work starts from this siloed current state.\n\nGrading is local against the authored fact sheet for this drawing — no AI gateway is required.",
+          "figureId": "fig-independent-vsphere",
+          "highlightIds": [
+            "mod6-h-drawings"
           ]
         },
         {
@@ -1117,7 +1369,20 @@
           "body": "VCF 9 defines a five-level taxonomy. A VCF private cloud is the highest management and consumption boundary and can contain one or more fleets. A VCF fleet is the environment managed by one set of fleet-level components, namely a single VCF Operations instance and a single VCF Automation instance, and contains one or more instances plus optionally standalone vCenter instances. A VCF instance is a discrete deployment with its own SDDC Manager, management vCenter and management NSX. A VCF domain is a lifecycle and isolation boundary inside an instance, either the mandatory management domain or a VI workload domain. A vSphere cluster is where ESX capacity lives, inside a domain.\n\nThe fleet-level components physically run in the management domain of the first instance in the fleet, which is why the first instance is architecturally special and why its availability and sizing decisions have fleet-wide consequences. Each additional instance still gets its own SDDC Manager, management vCenter and management NSX, and may deploy collectors for observability. Because a fleet is defined by one VCF Operations and one VCF Automation instance, fleet scope is a real design decision: it sets the blast radius of the shared services and the latency budget between those services and everything they manage.\n\nBroadcom formalised this hierarchy in VCF 9 to separate what is shared from what is local. Centralising operations, automation, identity, licensing and lifecycle orchestration at the fleet level removes per-instance duplication and gives one console across the estate; keeping vCenter, NSX and SDDC Manager instance-local preserves lifecycle independence and failure isolation. Use the fleet boundary to reflect an operational and latency boundary, not an organisational chart.",
           "highlightIds": [
             "mod6-h-c1"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "What does high availability mode mean for the VCF management components?",
+            "options": [
+              "single appliance protected by vSphere HA",
+              "Three-node appliance clusters providing data redundancy and single-node failure tolerance",
+              "Two appliances in active-passive failover",
+              "An external load balancer in front of one appliance"
+            ],
+            "answer": 1,
+            "explanation": "High availability mode deploys the components as three-node clusters. For VCF Operations the nodes are a primary, a replica and a data node, and an external load balancer is an optional addition rather than the mechanism itself.",
+            "reinforce": "Study clip — VCF Private Cloud Hierarchy: Memorise the order: private cloud, fleet, instance, domain, vSphere cluster. Know that fleet-level components (VCF Operations and VCF Automation) live in the management domain of the first instance, and that a fleet has exactly one of each.",
+            "sourceQuestionId": "q17"
+          }
         },
         {
           "id": "mod6-s-c2",
@@ -1125,7 +1390,20 @@
           "body": "Broadcom publishes fleet deployment models, sometimes called fleet design blueprints, describing supported topologies: single-site (single availability zone) centralised management, multi-availability-zone, and multi-region or multi-site models. Each model specifies the placement of fleet components, the supported cluster models, and the availability characteristics that follow.\n\nYou select a blueprint by matching it to the availability and latency facts of the estate. A single-site model uses one VCF Operations and one VCF Automation instance to manage everything, giving the lowest operational complexity and the strongest consistency, and accepting that an availability zone or region failure affects the whole fleet. Multi-zone and multi-region models distribute components to survive a zone loss, at the cost of manual post-installation work, additional latency constraints between components, and generally a second instance to act as a starting point for a new primary management domain. Fleet placement must respect the latency budget between the fleet components and everything they manage, so the fleet should sit in a low-latency, high-bandwidth segment. In 9.1 Broadcom refreshed the blueprints and publishes fleet latency diagrams.\n\nThe blueprints exist so architects do not have to invent management-plane topology from first principles, and so support boundaries are clear. Choosing a blueprint that overshoots the customer's actual availability requirement is a common and expensive error, because multi-region management planes carry real ongoing operational cost.",
           "highlightIds": [
             "mod6-h-c2"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "The customer needs one single sign-on experience across all VCF components in the fleet, federated to their enterprise directory. What should the design use?",
+            "options": [
+              "Local accounts on each component",
+              "An external, appliance-mode VCF Identity Broker federated to the enterprise identity provider",
+              "The embedded identity broker in each workload domain vCenter",
+              "vCenter Single Sign-On only"
+            ],
+            "answer": 1,
+            "explanation": "Appliance mode is a three-node cluster with an internal load balancer that tolerates a node failure, can serve up to five VCF instances, and does not depend on the management domain vCenter being available. Federating to the enterprise identity provider keeps account lifecycle and multi-factor policy under existing governance.",
+            "reinforce": "Study clip — Fleet Blueprint and Deployment Models: For a single-site customer with no validated second site, the correct answer is a single-site fleet blueprint. Do not select a multi-region model unless the requirements and the facts (two independent sites, latency, quorum) support it.",
+            "sourceQuestionId": "q18"
+          }
         },
         {
           "id": "mod6-s-c3",
@@ -1166,7 +1444,20 @@
           "highlightIds": [
             "mod6-h-f1",
             "mod6-h-f2"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "The environment is subject to enterprise public key infrastructure governance and PCI compliance. How should platform certificates be issued?",
+            "options": [
+              "From the external enterprise certificate authority",
+              "From VMCA acting as the root authority",
+              "Self-signed certificates on each component",
+              "No certificates are required for internal components"
+            ],
+            "answer": 0,
+            "explanation": "Compliance regimes require certificates that chain to a governed enterprise root with defined issuance, key strength, validity, revocation and audit processes. VMCA as a self-contained root sits outside that governance, though VMCA as a subordinate of the enterprise authority is an acceptable variant.",
+            "reinforce": "Study clip — Must know 1: Hierarchy order: VCF private cloud, VCF fleet, VCF instance, VCF domain, vSphere cluster.",
+            "sourceQuestionId": "q19"
+          }
         },
         {
           "id": "mod6-s-dd1",
@@ -1565,7 +1856,20 @@
           "highlightIds": [
             "mod7-h-c1",
             "mod7-h-c2"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "Development workloads currently run in the legacy environment and must move to VCF 9. What is the recommended approach?",
+            "options": [
+              "Run the development workloads in the management domain",
+              "Create a new VI workload domain and migrate the workloads into it",
+              "Upgrade the legacy environment in place and leave workloads where they are",
+              "Place the workloads in the first workload domain's management cluster"
+            ],
+            "answer": 1,
+            "explanation": "A dedicated workload domain gives its own vCenter, independent lifecycle, and a failure and contention boundary separate from the management plane. Building it new and migrating in also keeps the source environment running as a fallback. The management domain never hosts user workloads.",
+            "reinforce": "Study clip — VI Workload Domain: Remember that the management domain never hosts user workloads, that each workload domain gets its own vCenter, and that NSX Manager can be shared or dedicated. The first workload domain's vCenter and NSX Manager appliances are deployed into the management domain.",
+            "sourceQuestionId": "q21"
+          }
         },
         {
           "id": "mod7-s-c1",
@@ -1573,7 +1877,20 @@
           "body": "A workload domain is a domain inside a VCF instance dedicated to running consumer workloads, as distinct from the management domain which hosts the platform's own components. Each workload domain has its own vCenter instance, one or more vSphere clusters, and an NSX Manager cluster that it either owns or shares.\n\nWorkload domains are created from VCF Operations. For the first workload domain, VCF Operations deploys a vCenter instance and an NSX Manager instance into the management domain; for each additional workload domain it deploys another vCenter, and you choose whether to share an existing NSX Manager cluster (with another workload domain or with the management domain) or to deploy a new one. All clusters in all domains sharing an NSX Manager also share the overlay transport zone, which is why NSX sharing is an isolation decision and not just a footprint decision. Capacity is added by commissioning hosts and expanding clusters, and vSphere Supervisor can be enabled during workload domain creation to turn the domain into a consumption platform.\n\nBroadcom separates workload domains from the management domain so that workload lifecycle, upgrade cadence, resource contention and failure domains are decoupled from the platform's control plane. Creating a separate domain per distinct workload class, such as development versus production, gives independent upgrade windows and a smaller blast radius, at the cost of an additional vCenter to operate.",
           "highlightIds": [
             "mod7-h-c1"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "In a vSAN storage policy, what does FTT stand for?",
+            "options": [
+              "Failures to tolerate",
+              "Fault tolerance threshold",
+              "File transfer type",
+              "Fabric transport tier"
+            ],
+            "answer": 0,
+            "explanation": "FTT is failures to tolerate: the number of concurrent host or device failures the object's data must survive. Combined with the data placement method it determines capacity overhead and the minimum host count.",
+            "reinforce": "Study clip — VI Workload Domain: Remember that the management domain never hosts user workloads, that each workload domain gets its own vCenter, and that NSX Manager can be shared or dedicated. The first workload domain's vCenter and NSX Manager appliances are deployed into the management domain.",
+            "sourceQuestionId": "q22"
+          }
         },
         {
           "id": "mod7-s-c2",
@@ -1581,7 +1898,20 @@
           "body": "A Virtual Private Cloud in NSX is an isolated, self-contained domain of networking resources, with its own address space, subnets, routing, outbound network address translation and services, that can be associated with one or more isolated compute domains (vSphere namespaces). It is the default and recommended workload network model for Supervisor in VCF 9.\n\nThe VPC framework is natively multi-tenant. A provider or VI administrator creates VPCs in a default space, or tenant organisations create their own VPCs and map vSphere namespaces to them. The NSX Container Plugin automatically creates the VPC, load balancer, SNAT address and default subnet sets for a namespace, and VPC constructs are exposed as Kubernetes custom resources through the Supervisor API, so consumers create subnets declaratively. VPCs are configured with default outbound network address translation so private workloads can reach external resources. A VPC spans a single region, so namespaces in different regions always map to different VPCs. Different VPCs are used where workloads need network segregation, while private transit gateway subnets allow controlled communication between them; where no separation is needed, one VPC can serve many namespaces.\n\nBroadcom made VPC the recommended model because tenant self-service networking cannot depend on a network team provisioning VLANs and segments. VPC gives each tenant a cloud-like network they can shape themselves, inside guardrails the provider sets, and it is a prerequisite for the full VCF Automation All Apps capability set. Other stacks (VDS-backed, NSX classic Tier-0/Tier-1 segments) are supported but do not unlock the complete capability set.",
           "highlightIds": [
             "mod7-h-c2"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "Why is the VPC network model chosen for a self-service development platform?",
+            "options": [
+              "It gives tenants isolated, self-service networking provisioned declaratively inside provider guardrails",
+              "It removes the need for an NSX Manager cluster",
+              "It allows workloads to bypass the overlay entirely",
+              "It provides the only supported Supervisor network stack"
+            ],
+            "answer": 0,
+            "explanation": "VPC provides an isolated domain of networking resources with its own address space, subnets, routing and outbound NAT, created declaratively through Kubernetes custom resources. VDS-backed and NSX classic stacks are also supported, but they do not unlock the full capability set.",
+            "reinforce": "Study clip — VPC Networking: VPC equals tenant self-service, isolated networking, and it is the prerequisite for All Apps organizations. Know that VPCs are region-scoped and that the NSX Container Plugin automatically provisions VPC, load balancer, SNAT and subnet sets for a namespace.",
+            "sourceQuestionId": "q23"
+          }
         },
         {
           "id": "mod7-s-c3",
@@ -1614,7 +1944,20 @@
           "highlightIds": [
             "mod7-h-f1",
             "mod7-h-f2"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "What is the main reason to deploy a dedicated NSX Edge cluster rather than collapsing Edge nodes into the workload compute cluster?",
+            "options": [
+              "It removes the need for BGP peering with the fabric",
+              "It isolates Edge lifecycle and failure domain and makes north-south bandwidth predictable",
+              "It reduces the number of hosts required",
+              "It eliminates the need for edge tunnel endpoint VLANs"
+            ],
+            "answer": 1,
+            "explanation": "All north-south traffic and centralised services traverse the Edge cluster, so its bandwidth demands, failure behaviour and upgrade cadence differ from tenant workloads. Dedicating it separates those concerns, at the cost of additional hosts.",
+            "reinforce": "Study clip — Must know 1: Each workload domain has its own vCenter; NSX Manager can be dedicated to the domain or shared with another domain or the management domain.",
+            "sourceQuestionId": "q24"
+          }
         },
         {
           "id": "mod7-s-dd1",
@@ -1809,6 +2152,11 @@
       "primer": "After this module you should explain the mechanism without notes, then defend each design choice from evidence — not from a memorized letter. Watch for these while you take the Course: AMPRS Framework; High Availability versus Backup and Recovery; Stretched Cluster; RTO and RPO.",
       "highlights": [
         {
+          "id": "mod8-h-drawings",
+          "title": "Course drawings in this module",
+          "text": "You will study these drawings object-by-object and pass local knowledge checks before advancing: Visual Design Decision Process."
+        },
+        {
           "id": "mod8-h-c1",
           "title": "AMPRS Framework",
           "text": "Know the acronym expansion exactly: Availability, Manageability, Performance, Recoverability, Security. Expect questions asking which dimension a given consequence belongs to, and remember that operational effort and required skills are manageability, not availability."
@@ -1859,6 +2207,28 @@
           "highlightIds": [
             "mod8-h-c1",
             "mod8-h-c2"
+          ],
+          "knowledgeCheck": {
+            "stem": "What does AMPRS stand for?",
+            "options": [
+              "Availability, Management, Provisioning, Resilience, Scalability",
+              "Availability, Manageability, Performance, Recoverability, Security",
+              "Architecture, Migration, Platform, Reliability, Support",
+              "Automation, Monitoring, Patching, Reporting, Security"
+            ],
+            "answer": 1,
+            "explanation": "AMPRS is Availability, Manageability, Performance, Recoverability and Security. It is applied to design decisions to state the trade-off each one creates, not only the benefit.",
+            "reinforce": "Study clip — AMPRS Framework: Know the acronym expansion exactly: Availability, Manageability, Performance, Recoverability, Security. Expect questions asking which dimension a given consequence belongs to, and remember that operational effort and required skills are manageability, not availability.",
+            "sourceQuestionId": "q27"
+          }
+        },
+        {
+          "id": "mod8-s-fig-design-decision-process",
+          "title": "Drawing: Visual Design Decision Process",
+          "body": "Study this course drawing in detail. Every labeled object below must make sense before you continue.\n\nThis drawing is the rule for every later design decision in the course. Conceptual inputs (RCAR) feed a Design Decision; the decision is only complete when it carries Justification + AMPRS. The red banner is not decoration: all design decisions are driven by the Conceptual Model.\n\nGrading is local against the authored fact sheet for this drawing — no AI gateway is required.",
+          "figureId": "fig-design-decision-process",
+          "highlightIds": [
+            "mod8-h-drawings"
           ]
         },
         {
@@ -1867,7 +2237,20 @@
           "body": "AMPRS is the five-dimension evaluation model used throughout the VCF design methodology: Availability (tolerance to component and site failure), Manageability (operational effort, tooling and skills required), Performance (throughput, latency and headroom), Recoverability (ability to restore after data loss or corruption) and Security (identity, encryption, segmentation and compliance).\n\nEvery design decision record carries an AMPRS impact statement naming which dimensions improve, which degrade and by how much. The value comes from the honesty of the degradations. Adding a three-node high availability cluster improves availability and degrades manageability and cost. Choosing erasure coding over mirroring improves cost and capacity efficiency and, in OSA, degrades write performance. Choosing an external certificate authority improves security and degrades manageability by adding a certificate renewal obligation. Because the dimensions conflict, the framework does not produce a single best answer; it produces a documented, defendable trade-off tied back to the non-functional requirements that set the priorities.\n\nBroadcom uses AMPRS as the connective tissue between requirements and decisions. It stops designs from silently optimising a single dimension, usually availability, at the expense of an operations team's ability to run the result. It also makes design review possible, because a reviewer can check whether the declared trade-offs match the customer's stated priorities.",
           "highlightIds": [
             "mod8-h-c1"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "What is the difference between high availability and backup and recovery?",
+            "options": [
+              "They are two names for the same capability",
+              "High availability limits the duration of an interruption; backup and recovery enable restoration after loss or corruption",
+              "High availability protects data; backup protects uptime",
+              "Backup is only required when high availability is unavailable"
+            ],
+            "answer": 1,
+            "explanation": "High availability uses redundancy already in place so a surviving component takes over after a failure. It cannot help with deletion, corruption or ransomware, because every replica faithfully reflects the damage. Backup holds an independent copy that can be restored.",
+            "reinforce": "Study clip — AMPRS Framework: Know the acronym expansion exactly: Availability, Manageability, Performance, Recoverability, Security. Expect questions asking which dimension a given consequence belongs to, and remember that operational effort and required skills are manageability, not availability.",
+            "sourceQuestionId": "q28"
+          }
         },
         {
           "id": "mod8-s-c2",
@@ -1875,7 +2258,20 @@
           "body": "High availability and backup are answers to different questions. High availability limits the duration of an interruption caused by component failure, by having redundancy already in place so a surviving component takes over. Backup and recovery enable restoration of data and configuration after loss, corruption, deletion or compromise, by holding an independent copy that can be brought back.\n\nvSphere HA restarts virtual machines on surviving hosts after a host failure; vSAN FTT policy keeps object data available through host or device failure; three-node management clusters survive a node loss. None of these protect against a workload being deleted, a database being corrupted, a bad change being applied, or ransomware encrypting data, because every replica faithfully reflects the damage. Backup and recovery address exactly those cases, and they are governed by different targets: recovery point objective (how much data loss is acceptable) and recovery time objective (how long restoration may take). A complete design needs both, and its recoverability statement must cover the platform's own components as well as the workloads, which in 9.1 is simplified because VCF management services share a common runtime with unified backup and recovery.\n\nBroadcom separates the two because conflating them is one of the most common and most expensive design errors. A customer told they have 'high availability' frequently believes they are protected against data loss, and discovers otherwise during an incident. Stating the distinction explicitly in the recoverability dimension is how the architect prevents that.",
           "highlightIds": [
             "mod8-h-c2"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "What must be true before a stretched cluster can be recommended?",
+            "options": [
+              "Two independent failure domains, latency within the supported round-trip limit, and an independent witness for quorum",
+              "single site with sufficient host count",
+              "Two data sites with the witness co-located at the primary site",
+              "Asynchronous replication configured between sites"
+            ],
+            "answer": 0,
+            "explanation": "The prerequisites are physical facts, not configuration options: two genuinely independent failure domains, no more than 5 ms round trip between data sites, and an independent third location hosting the witness that arbitrates quorum.",
+            "reinforce": "Study clip — High Availability versus Backup and Recovery: The exam phrasing is that high availability limits interruption while backup enables restoration. Redundancy and replication are not backup, because they replicate corruption and deletion faithfully.",
+            "sourceQuestionId": "q29"
+          }
         },
         {
           "id": "mod8-s-c3",
@@ -1900,7 +2296,20 @@
           "highlightIds": [
             "mod8-h-f1",
             "mod8-h-f2"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "Which AMPRS dimension covers the operational effort, tooling and skills a design demands?",
+            "options": [
+              "Availability",
+              "Manageability",
+              "Performance",
+              "Security"
+            ],
+            "answer": 1,
+            "explanation": "Manageability includes the operational burden, the tooling required and the skills the team must have. A design that a two-person operations team cannot run has a manageability problem regardless of how available it is.",
+            "reinforce": "Study clip — Must know 1: AMPRS equals Availability, Manageability, Performance, Recoverability, Security.",
+            "sourceQuestionId": "q79"
+          }
         },
         {
           "id": "mod8-s-dd1",
@@ -2166,6 +2575,11 @@
       "primer": "After this module you should explain the mechanism without notes, then defend each design choice from evidence — not from a memorized letter. Watch for these while you take the Course: VCF Automation; All Apps Organization; vSphere Supervisor and Namespaces; VM Service.",
       "highlights": [
         {
+          "id": "mod9-h-drawings",
+          "title": "Course drawings in this module",
+          "text": "You will study these drawings object-by-object and pass local knowledge checks before advancing: Business Initiatives Capability Map, Logical Design Template."
+        },
+        {
           "id": "mod9-h-c1",
           "title": "VCF Automation",
           "text": "One VCF Automation instance per fleet, running in the first instance's management domain. Know that it is built on vSphere Supervisor and that provider versus organization portal is the governance split."
@@ -2216,6 +2630,37 @@
           "highlightIds": [
             "mod9-h-c1",
             "mod9-h-c2"
+          ],
+          "knowledgeCheck": {
+            "stem": "The development platform must offer self-service virtual machines and Kubernetes clusters. Which VCF Automation organization type is required?",
+            "options": [
+              "VM Apps organization",
+              "An All Apps organization",
+              "provider organization",
+              "default organization with no type"
+            ],
+            "answer": 1,
+            "explanation": "All Apps organizations are backed by vSphere Supervisor and vSphere namespaces and expose the full built-in cloud services catalogue including virtual machines and Kubernetes. VM Apps organizations run VM-based applications only and exist as a transition path for Aria Automation users.",
+            "reinforce": "Study clip — VCF Automation: One VCF Automation instance per fleet, running in the first instance's management domain. Know that it is built on vSphere Supervisor and that provider versus organization portal is the governance split.",
+            "sourceQuestionId": "q30"
+          }
+        },
+        {
+          "id": "mod9-s-fig-business-initiatives",
+          "title": "Drawing: Business Initiatives Capability Map",
+          "body": "Study this course drawing in detail. Every labeled object below must make sense before you continue.\n\nThis drawing is top-down: Business Initiatives → Use Cases → Services/Capabilities → Private Cloud Operating Model. It explains why VCF exists for Rainpole: technology is justified by business initiatives, not the reverse.\n\nGrading is local against the authored fact sheet for this drawing — no AI gateway is required.",
+          "figureId": "fig-business-initiatives",
+          "highlightIds": [
+            "mod9-h-drawings"
+          ]
+        },
+        {
+          "id": "mod9-s-fig-logical-design-template",
+          "title": "Drawing: Logical Design Template",
+          "body": "Study this course drawing in detail. Every labeled object below must make sense before you continue.\n\nThis drawing is the target logical capability map. Consumers sit above integrations; consumption/services, operations, and virtualized infrastructure stack in the center; security and data-protection pillars run the sides; modern hardware is the base. Use it to place every later design decision in the correct layer.\n\nGrading is local against the authored fact sheet for this drawing — no AI gateway is required.",
+          "figureId": "fig-logical-design-template",
+          "highlightIds": [
+            "mod9-h-drawings"
           ]
         },
         {
@@ -2224,7 +2669,20 @@
           "body": "VCF Automation is the fleet-level self-service consumption and automation layer of VCF, the successor to Aria Automation and, in the 9.x lineage, also absorbing the Cloud Director tenancy role. A fleet has exactly one VCF Automation instance, running in the management domain of the first instance, and it is built on the vSphere Supervisor platform.\n\nIt exposes a Provider Management Portal for the platform team and Organization Portals for tenants. The provider creates organizations, assigns Supervisor capacity, VM classes, storage classes and network resources to them, and publishes catalogue items. Tenants then consume built-in cloud services on a self-service basis: virtual machines, Kubernetes clusters, networking, volumes, a secret store, databases, Harbor container registries, external DNS, certificates and AI workloads. Because it is a single fleet-level instance, its availability and sizing are fleet-wide concerns and it is one of the components covered by the high availability decision in the management domain.\n\nBroadcom centralises consumption at the fleet level so that a tenant's experience is uniform across every instance and domain in the estate, and so that governance, quota and chargeback are enforced in one place rather than per vCenter. Self-service is the whole point: it removes the platform team from the provisioning path while keeping them in control of the guardrails.",
           "highlightIds": [
             "mod9-h-c1"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "Several development teams have different trust requirements and must not reach each other's workloads or consume each other's quota. How should vSphere namespaces be allocated?",
+            "options": [
+              "One shared namespace with naming conventions to separate teams",
+              "separate namespace per trust boundary",
+              "One namespace per virtual machine",
+              "Namespaces are not required when using VPC networking"
+            ],
+            "answer": 1,
+            "explanation": "A namespace bounds compute and storage quota, assigned networks, storage class access and identity permissions simultaneously, which makes it the platform's real security boundary. Naming conventions enforce nothing.",
+            "reinforce": "Study clip — VCF Automation: One VCF Automation instance per fleet, running in the first instance's management domain. Know that it is built on vSphere Supervisor and that provider versus organization portal is the governance split.",
+            "sourceQuestionId": "q31"
+          }
         },
         {
           "id": "mod9-s-c2",
@@ -2232,7 +2690,20 @@
           "body": "An organization is the top-level tenancy construct in VCF Automation, representing a tenant, business unit or line of business in a secure and isolated environment. There are two types. An All Apps organization is backed by vSphere Supervisor and vSphere namespaces and delivers the full built-in cloud services catalogue. A VM Apps organization is the transition path for existing Aria Automation users, is self-contained with its own cloud accounts, cloud zones and profiles, and runs virtual-machine-based applications only.\n\nThe provider administrator creates an All Apps organization, assigns it one or more Supervisors (or all available), sets zone-level CPU and memory limits and reservations, and selects the VM classes and storage classes it may use. Within the organization there is further isolation at project and namespace level, and quota assigned to the organization is subdivided into namespaces for project teams. Only one VM Apps organization can exist per VCF Automation instance; All Apps organizations can be many. All Apps requires a Supervisor with VPC networking to unlock the complete capability set.\n\nBroadcom made All Apps the primary multi-tenancy model because it is the only one that delivers virtual machines and Kubernetes and data services through a single declarative platform with consistent quota, identity and isolation. VM Apps exists to protect existing Aria Automation investment during transition, not as a target state. Choose All Apps whenever the tenant needs both virtual machines and modern container workloads, which is the normal case for a development platform.",
           "highlightIds": [
             "mod9-h-c2"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "Which construct provides hard logical tenancy in VCF Automation?",
+            "options": [
+              "Projects",
+              "Organizations",
+              "Namespace classes",
+              "Supervisor zones"
+            ],
+            "answer": 1,
+            "explanation": "Organizations are the top-level tenancy construct, giving each tenant a secure and isolated environment with its own portal, identity mapping, quota and catalogue. Projects and namespaces subdivide an organization but do not create the top-level boundary.",
+            "reinforce": "Study clip — All Apps Organization: If the requirement mentions both virtual machines and Kubernetes or VKS, the answer is an All Apps organization. Remember only one VM Apps organization is permitted per VCF Automation instance, and that All Apps needs Supervisor with VPC.",
+            "sourceQuestionId": "q32"
+          }
         },
         {
           "id": "mod9-s-c3",
@@ -2273,7 +2744,20 @@
           "highlightIds": [
             "mod9-h-f1",
             "mod9-h-f2"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "Which Supervisor services must be enabled to deliver both self-service virtual machines and self-service Kubernetes clusters?",
+            "options": [
+              "VM Service and VKS Service",
+              "VKS Service only",
+              "VM Service only",
+              "Neither; VCF Automation provides both without Supervisor services"
+            ],
+            "answer": 0,
+            "explanation": "VM Service lets virtual machines be declared as Kubernetes objects using VM classes and content library images; VKS Service provisions conformant Kubernetes guest clusters. Enabling both gives one API, quota model, identity model and storage policy framework across workload types.",
+            "reinforce": "Study clip — Must know 1: A fleet has exactly one VCF Automation instance, running in the management domain of the first instance.",
+            "sourceQuestionId": "q33"
+          }
         },
         {
           "id": "mod9-s-dd1",
@@ -2523,6 +3007,11 @@
       "primer": "After this module you should explain the mechanism without notes, then defend each design choice from evidence — not from a memorized letter. Watch for these while you take the Course: VCF Operations; Policies; Symptoms; Alerts.",
       "highlights": [
         {
+          "id": "mod10-h-drawings",
+          "title": "Course drawings in this module",
+          "text": "You will study these drawings object-by-object and pass local knowledge checks before advancing: Logical Design Template."
+        },
+        {
           "id": "mod10-h-c1",
           "title": "VCF Operations",
           "text": "One VCF Operations instance per fleet, in the first instance's management domain, three nodes in the high availability model. In 9.1 it is also where lifecycle work lives because the SDDC Manager user interface is deprecated."
@@ -2573,6 +3062,28 @@
           "highlightIds": [
             "mod10-h-c1",
             "mod10-h-c2"
+          ],
+          "knowledgeCheck": {
+            "stem": "What dashboard strategy should the day 2 operations design adopt?",
+            "options": [
+              "Rely solely on the out-of-the-box dashboards",
+              "One custom dashboard containing the essential key performance indicators, with separate drill-down views",
+              "separate dashboard for every role and every metric group",
+              "No dashboards; alerts alone are sufficient"
+            ],
+            "answer": 1,
+            "explanation": "A single curated network operations centre dashboard gives the operations team one agreed source of truth that can be read at a glance and kept current. Out-of-the-box views are built for exploration, and many near-duplicate dashboards drift and go unmaintained.",
+            "reinforce": "Study clip — VCF Operations: One VCF Operations instance per fleet, in the first instance's management domain, three nodes in the high availability model. In 9.1 it is also where lifecycle work lives because the SDDC Manager user interface is deprecated.",
+            "sourceQuestionId": "q35"
+          }
+        },
+        {
+          "id": "mod10-s-fig-logical-design-template",
+          "title": "Drawing: Logical Design Template",
+          "body": "Study this course drawing in detail. Every labeled object below must make sense before you continue.\n\nThis drawing is the target logical capability map. Consumers sit above integrations; consumption/services, operations, and virtualized infrastructure stack in the center; security and data-protection pillars run the sides; modern hardware is the base. Use it to place every later design decision in the correct layer.\n\nGrading is local against the authored fact sheet for this drawing — no AI gateway is required.",
+          "figureId": "fig-logical-design-template",
+          "highlightIds": [
+            "mod10-h-drawings"
           ]
         },
         {
@@ -2581,7 +3092,20 @@
           "body": "VCF Operations is the fleet-level operations, observability and lifecycle console for VCF, the successor to Aria Operations. There is exactly one VCF Operations instance per fleet, running in the management domain of the first instance, and it also surfaces the centralised lifecycle and identity workflows and, in 9.1, the workflows previously in the SDDC Manager user interface.\n\nIt collects metrics, properties and events from adapters across vCenter, ESX, vSAN, NSX and the VCF management components, optionally through cloud proxies and collector groups for scale and availability. Collected data is evaluated against policies and alert definitions, presented through dashboards and views, and acted on through actions and notifications. In the high availability model it is a three-node cluster (primary, replica, data) with node size selected from the forecast virtual machine and object count across all connected instances. Because it is fleet-scoped it is the single place where estate-wide health, capacity, compliance and lifecycle state are visible.\n\nBroadcom consolidated operations at the fleet level so that one console covers every instance and domain, which is what makes consistent service level measurement and capacity management possible across an estate. Making it also the lifecycle console in 9.1 removes the split between operating the platform and upgrading it.",
           "highlightIds": [
             "mod10-h-c1"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "Which VCF Operations capabilities should be used to instrument the platform against its service level objectives?",
+            "options": [
+              "Dashboards only",
+              "Alerts only",
+              "Policies and symptoms only",
+              "All of them together: policies, symptoms, alerts, key performance indicators and super metrics"
+            ],
+            "answer": 3,
+            "explanation": "The capabilities form a dependent chain. Policies scope what is evaluated and at what threshold, symptoms are the individual conditions, alert definitions compose symptoms and attach recommendations, super metrics supply measures the platform does not natively collect, and dashboards present the curated indicators.",
+            "reinforce": "Study clip — VCF Operations: One VCF Operations instance per fleet, in the first instance's management domain, three nodes in the high availability model. In 9.1 it is also where lifecycle work lives because the SDDC Manager user interface is deprecated.",
+            "sourceQuestionId": "q36"
+          }
         },
         {
           "id": "mod10-s-c2",
@@ -2589,7 +3113,20 @@
           "body": "A policy in VCF Operations is the container that determines how objects are analysed and monitored: which alert definitions and symptom definitions are active, what thresholds apply, how capacity and analysis settings behave, and which super metrics are calculated. Policies are assigned to object groups, and local policies can inherit from base policies or override them.\n\nEach policy carries packages of alert definitions and symptom definitions that can be individually activated, deactivated or left to inherit, and for symptoms you can override threshold, criticality, wait cycles and cancel cycles. Wait and cancel cycles are the anti-noise mechanism: they require a condition to persist for several collection cycles before a symptom triggers and before it clears. A super metric must be enabled in the applicable policy before it is calculated, which is the single most common reason a newly created super metric appears to do nothing. Because policies are scoped to object groups, the same metric can carry a strict threshold on production objects and a relaxed one on development objects.\n\nBroadcom uses policies so that monitoring behaviour is differentiated by service level rather than uniform across the estate. Without them, a threshold strict enough for production generates constant noise on a development platform, and operators learn to ignore alerts, which defeats the entire instrumentation exercise.",
           "highlightIds": [
             "mod10-h-c2"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "How should a deployment or provisioning time service level objective be instrumented?",
+            "options": [
+              "Report the average provisioning time monthly",
+              "Capture start and completion timestamps, report the 95th and 99th percentiles plus failure counts, and alert when the threshold is breached",
+              "Count successful and failed provisioning requests only",
+              "Rely on tenant-reported complaints"
+            ],
+            "answer": 1,
+            "explanation": "A duration objective is a distribution, so it must be measured as one. Percentiles expose the tail that users actually experience, which an average conceals, and failure counts matter because a fast failure is not a success. Implementing it as a super metric makes the objective alertable.",
+            "reinforce": "Study clip — Policies: Policies control what is active and at what threshold, per object group, with inheritance from base policies. Remember that super metrics must be activated in the policy to be calculated.",
+            "sourceQuestionId": "q37"
+          }
         },
         {
           "id": "mod10-s-c3",
@@ -2637,7 +3174,20 @@
           "body": "Confusing symptoms with alerts. A symptom is one test condition and notifies nobody; an alert definition combines symptoms and can notify and recommend.\n\nCreating a super metric and never enabling it in the policy, then concluding it is broken.\n\nUsing averages for latency or duration objectives. The 95th and 99th percentiles are what reflect user experience.\n\nBuilding many dashboards instead of one curated view, so nobody maintains any of them and the operations team has no agreed source of truth.\n\nApplying one uniform policy to production and development objects, which guarantees either noise or blindness.\n\nSetting thresholds without wait and cancel cycles, producing flapping alerts that get ignored.\n\nCreating alert definitions with no recommendations, which passes an unactionable problem to the operator.\n\nAssuming an alert definition notifies by itself. Notification rules and outbound settings are separate configuration.\n\nInstrumenting only infrastructure metrics and never the service level objectives the business actually agreed.",
           "highlightIds": [
             "mod10-h-f1"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "Constraint C03 requires that phase 1 alerting integrates with the existing support process. What is the correct implementation?",
+            "options": [
+              "Log alerts to a file for weekly review",
+              "Route alerts to the support email alias using notification rules and outbound settings",
+              "Grant every operator access to the alerts console and take no further action",
+              "Defer all alerting to a later phase"
+            ],
+            "answer": 1,
+            "explanation": "Alert definitions generate alerts; notification rules combined with outbound settings deliver them to a destination such as an email alias, with payload templates shaping the content. Routing to the existing support alias satisfies C03 without building a new process.",
+            "reinforce": "Study clip — Must know 1: One VCF Operations instance per fleet, in the management domain of the first instance; three nodes in the high availability model.",
+            "sourceQuestionId": "q38"
+          }
         },
         {
           "id": "mod10-s-dd1",
@@ -2808,6 +3358,11 @@
       "primer": "After this module you should explain the mechanism without notes, then defend each design choice from evidence — not from a memorized letter. Watch for these while you take the Course: HCX (VCF Operations HCX); Cold Migration; Bulk Migration; vMotion Migration.",
       "highlights": [
         {
+          "id": "mod11-h-drawings",
+          "title": "Course drawings in this module",
+          "text": "You will study these drawings object-by-object and pass local knowledge checks before advancing: Current State: Independent vSphere Environments."
+        },
+        {
           "id": "mod11-h-c1",
           "title": "HCX (VCF Operations HCX)",
           "text": "Know that the HCX-IX interconnect appliance's mobility agent performs vMotion, Cold and RAV migrations, that Layer 2 network extension lets workloads keep their addresses, and that HCX also works between clusters in a single vCenter."
@@ -2858,6 +3413,28 @@
           "highlightIds": [
             "mod11-h-c1",
             "mod11-h-c2"
+          ],
+          "knowledgeCheck": {
+            "stem": "A large estate of downtime-sensitive workloads must be migrated into the new workload domain with minimal interruption. Which HCX method is appropriate?",
+            "options": [
+              "Cold migration",
+              "Bulk migration",
+              "Replication Assisted vMotion",
+              "HCX vMotion"
+            ],
+            "answer": 2,
+            "explanation": "RAV combines bulk migration's parallelism, resiliency and scheduling with vMotion's zero-downtime state transfer. Bulk's interruption is reboot-equivalent, vMotion is serial and does not scale, and cold migration requires the workload to be powered off.",
+            "reinforce": "Study clip — HCX (VCF Operations HCX): Know that the HCX-IX interconnect appliance's mobility agent performs vMotion, Cold and RAV migrations, that Layer 2 network extension lets workloads keep their addresses, and that HCX also works between clusters in a single vCenter.",
+            "sourceQuestionId": "q39"
+          }
+        },
+        {
+          "id": "mod11-s-fig-independent-vsphere",
+          "title": "Drawing: Current State: Independent vSphere Environments",
+          "body": "Study this course drawing in detail. Every labeled object below must make sense before you continue.\n\nThis drawing is the as-is problem statement: three independent vSphere environments with dedicated vCenters. Storage is partly shared at the fabric layer for Prod/DMZ but arrays stay dedicated; Development is fully isolated. VCF design work starts from this siloed current state.\n\nGrading is local against the authored fact sheet for this drawing — no AI gateway is required.",
+          "figureId": "fig-independent-vsphere",
+          "highlightIds": [
+            "mod11-h-drawings"
           ]
         },
         {
@@ -2866,7 +3443,20 @@
           "body": "HCX is the workload mobility platform of VCF, providing interconnect, WAN optimisation, network extension and multiple migration technologies between two HCX-activated sites, or between clusters within a single vCenter. In the VCF 9 lineage it is branded VCF Operations HCX.\n\nYou pair the source and destination sites, define a compute profile at each end, and deploy a service mesh that instantiates the interconnect appliances, including the HCX-IX interconnect appliance whose mobility agent performs vMotion, Cold and RAV migrations, and optionally a Layer 2 network extension so that migrated workloads can retain their IP addresses. Migrations are then submitted as batches, each with a chosen method, and can be scheduled for a specific switchover window. HCX can also be used within a single vCenter when source and destination are different clusters, using the same compute profile and service mesh mechanics.\n\nBroadcom provides HCX so that migration into a new platform does not require re-addressing workloads, rebuilding virtual machines or accepting long outages. Network extension in particular is what removes the need to co-ordinate an IP change with every application team, which is usually the largest source of migration risk and delay.",
           "highlightIds": [
             "mod11-h-c1"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "When is bulk migration the appropriate choice?",
+            "options": [
+              "When a short cutover equivalent to a reboot is acceptable and many workloads must move in parallel",
+              "When no interruption of any kind is acceptable",
+              "When the virtual machines are already powered off",
+              "When migrating non-vSphere guest workloads"
+            ],
+            "answer": 0,
+            "explanation": "Bulk migration replicates in parallel while the source keeps running, then interrupts service for roughly the duration of a reboot at switchover. Zero downtime calls for RAV or vMotion, powered-off workloads use cold migration, and non-vSphere guests use OS Assisted Migration.",
+            "reinforce": "Study clip — HCX (VCF Operations HCX): Know that the HCX-IX interconnect appliance's mobility agent performs vMotion, Cold and RAV migrations, that Layer 2 network extension lets workloads keep their addresses, and that HCX also works between clusters in a single vCenter.",
+            "sourceQuestionId": "q40"
+          }
         },
         {
           "id": "mod11-s-c2",
@@ -2874,7 +3464,20 @@
           "body": "Cold migration moves a powered-off virtual machine using the VMware Network File Copy protocol. HCX selects it automatically when the source virtual machine is powered off.\n\nThe virtual machine's files are copied to the destination while it is off, then registered there. Because nothing is running, there is no memory or state transfer and no synchronisation phase, but the outage lasts for the whole copy, which makes duration a function of virtual machine size and available bandwidth. It suits workloads that are already off, decommissioning candidates, templates, and anything whose owner is happy to schedule a long window.\n\nCold migration exists as the simplest and lowest-risk method: with no running state there is nothing to keep in sync and little to go wrong. Broadcom keeps it in the toolkit because a meaningful share of any estate does not need to stay online, and spending live-migration capability on those workloads wastes both time and bandwidth.",
           "highlightIds": [
             "mod11-h-c2"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "What is HCX in the VCF 9 context?",
+            "options": [
+              "workload mobility platform providing interconnect, WAN optimisation, network extension and multiple migration methods, branded VCF Operations HCX",
+              "backup and replication product for virtual machines",
+              "network overlay for connecting VCF instances",
+              "licensing service for migrated workloads"
+            ],
+            "answer": 0,
+            "explanation": "HCX pairs source and destination sites, deploys a service mesh with interconnect appliances, and provides several migration technologies. It can also migrate between clusters within a single vCenter.",
+            "reinforce": "Study clip — Cold Migration: Cold equals powered off, Network File Copy protocol, long downtime, small scale. It is selected automatically for powered-off virtual machines.",
+            "sourceQuestionId": "q106"
+          }
         },
         {
           "id": "mod11-s-c3",
@@ -2915,7 +3518,20 @@
           "highlightIds": [
             "mod11-h-f1",
             "mod11-h-f2"
-          ]
+          ],
+          "knowledgeCheck": {
+            "stem": "Which protocol does HCX cold migration use?",
+            "options": [
+              "vSphere Replication",
+              "vMotion",
+              "Network File Copy",
+              "iSCSI"
+            ],
+            "answer": 2,
+            "explanation": "Cold migration uses the Network File Copy protocol and is selected automatically when the source virtual machine is powered off. Bulk migration uses vSphere Replication, and vMotion and RAV use the vMotion protocol for the state transfer.",
+            "reinforce": "Study clip — Must know 1: HCX methods are Cold, Bulk, vMotion, Replication Assisted vMotion (RAV) and OS Assisted Migration; HCX Assisted vMotion (Direct) is also available.",
+            "sourceQuestionId": "q107"
+          }
         },
         {
           "id": "mod11-s-dd1",

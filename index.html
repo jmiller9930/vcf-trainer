@@ -2,10 +2,10 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>VCF 9 Trainer</title>
+<title>VCF-9 AI Trainer</title>
 
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Study, quiz and mock-exam trainer for the VMware Cloud Foundation 9 Architect exam.">
+<meta name="description" content="Self-paced VCF 9 Architect training with drawings and blocking checks. Optional AI coach is bring-your-own API key.">
 
 <!-- PWA -->
 <link rel="manifest" href="manifest.json">
@@ -14,10 +14,13 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="VCF9">
+<meta name="apple-mobile-web-app-title" content="VCF-9 AI">
 <link rel="apple-touch-icon" href="icons/icon-192.png">
 <link rel="icon" href="icons/icon-192.png">
 
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 
@@ -30,8 +33,10 @@
   </button>
 
   <div class="appbar-title">
-    <span class="logo" aria-hidden="true">VCF</span>
-    <h1>VCF 9 Trainer</h1>
+    <a class="appbar-brand" href="#home" aria-label="VCF-9 AI Trainer home">
+      <span class="logo" aria-hidden="true">VCF</span>
+      <h1>VCF-9 AI Trainer</h1>
+    </a>
   </div>
 
   <button id="themeToggle" class="iconbtn" type="button" aria-label="Switch colour theme">
@@ -42,6 +47,7 @@
 <div class="layout">
   <nav id="sidebar" class="sidebar" aria-label="Main navigation">
     <ul class="nav">
+      <li><a class="nav-link" href="#home"     data-section="home">     <span class="nav-ico" aria-hidden="true">⌂</span> Home</a></li>
       <li><a class="nav-link" href="#study"    data-section="study">    <span class="nav-ico" aria-hidden="true">◱</span> Study</a></li>
       <li><a class="nav-link" href="#quiz"     data-section="quiz">     <span class="nav-ico" aria-hidden="true">◇</span> Quiz</a></li>
       <li><a class="nav-link" href="#exam"     data-section="exam">     <span class="nav-ico" aria-hidden="true">◎</span> Exam</a></li>

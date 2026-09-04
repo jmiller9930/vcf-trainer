@@ -6,3 +6,8 @@ __pycache__/
 .vscode/
 .idea/
 __uitest.html
+
+# Course-kit extracts — keep local until director/IP clearance
+data/figures/raw/
+data/figures/*.txt
+assets/landing-hero-cloud-automation.png
