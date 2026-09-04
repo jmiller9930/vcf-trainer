@@ -242,9 +242,12 @@ window.AITrainer = (function () {
 
   async function ask(question, contextText, opts) {
     const cfg = loadConfig();
-    const providers = activeProviders(cfg);
-    if (!providers.length) {
-      throw new Error('AI Trainer is not ready. Add a DeepSeek key (preferred coach) under AI Trainer and enable AI Trainer.');
+    /* Coach = DeepSeek only. OpenAI is TTS — use OpenAI chat only if DeepSeek is unavailable. */
+    const deepseek = deepseekProvider(cfg);
+    const openai = openaiProvider(cfg);
+    const coach = deepseek || openai;
+    if (!coach) {
+      throw new Error('AI Trainer is not ready. Enable AI Trainer and save a DeepSeek key (OpenAI is for TTS voice only).');
     }
 
     const messages = [
@@ -253,36 +256,12 @@ window.AITrainer = (function () {
     ];
     if (!messages[1].content) throw new Error('Ask a question first.');
 
-    const useQuorum = !!(cfg.quorum && providers.length > 1);
     const signal = opts && opts.signal;
-
-    if (!useQuorum) {
-      /* Prefer DeepSeek for coach when present (first in activeProviders). */
-      const answer = await chatCompletions(providers[0], messages, signal);
-      return { mode: 'single', answers: [{ provider: providers[0].id, label: providers[0].label, text: answer }] };
-    }
-
-    const settled = await Promise.allSettled(
-      providers.map(p => chatCompletions(p, messages, signal).then(text => ({
-        provider: p.id,
-        label: p.label,
-        text
-      })))
-    );
-
-    const answers = [];
-    const errors = [];
-    settled.forEach((s, i) => {
-      if (s.status === 'fulfilled') answers.push(s.value);
-      else errors.push(`${providers[i].label}: ${s.reason && s.reason.message ? s.reason.message : s.reason}`);
-    });
-    if (!answers.length) throw new Error(errors.join(' | ') || 'All providers failed.');
-
+    const answer = await chatCompletions(coach, messages, signal);
     return {
-      mode: 'quorum',
-      answers,
-      errors,
-      agree: answers.length > 1 && normalizeForCompare(answers[0].text) === normalizeForCompare(answers[1].text)
+      mode: 'single',
+      answers: [{ provider: coach.id, label: coach.label, text: answer }],
+      note: deepseek ? null : 'DeepSeek unavailable — used OpenAI chat as emergency coach. Prefer DeepSeek for AI Trainer.'
     };
   }
 

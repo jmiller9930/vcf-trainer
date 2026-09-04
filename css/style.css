@@ -1596,6 +1596,15 @@ table.data td.num { font-variant-numeric: tabular-nums; }
   font: inherit;
 }
 .ai-config textarea { min-height: 4.5rem; resize: vertical; }
+.ai-role-trainer {
+  border-left: 3px solid var(--how);
+  padding-left: .75rem;
+}
+.ai-role-tts {
+  border-left: 3px solid var(--accent);
+  padding-left: .75rem;
+  margin-top: 1rem;
+}
 .ai-toggle {
   display: flex;
   align-items: center;

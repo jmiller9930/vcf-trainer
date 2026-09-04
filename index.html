@@ -21,7 +21,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Source+Sans+3:wght@400;600&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="css/style.css">
+<link rel="stylesheet" href="css/style.css?v=14">
 </head>
 
 <body>
@@ -101,23 +101,73 @@
       <textarea id="aiCoachInput" rows="2" placeholder="Ask about this section or drawing…"></textarea>
       <button type="submit" class="btn btn-primary btn-sm" id="aiCoachSend">Ask</button>
     </form>
-    <p class="hint ai-coach-hint">Coach only — Course checks stay local. Keys never leave this browser except to your chosen API.</p>
+    <p class="hint ai-coach-hint">DeepSeek coach only — Course checks stay local. OpenAI is TTS voice, not the coach.</p>
   </div>
 </aside>
 
-<script src="js/data-loader.js"></script>
-<script src="js/quiz-engine.js"></script>
-<script src="js/ai-trainer.js"></script>
-<script src="js/app.js"></script>
+<script>window.VCF_BUILD = '14';</script>
+<script src="js/data-loader.js?v=14"></script>
+<script src="js/quiz-engine.js?v=14"></script>
+<script src="js/ai-trainer.js?v=14"></script>
+<script src="js/app.js?v=14"></script>
 
 <script>
-  if ('serviceWorker' in navigator && location.protocol.startsWith('http')) {
-    window.addEventListener('load', function () {
-      navigator.serviceWorker.register('sw.js').catch(function (err) {
-        console.warn('Service worker registration failed:', err);
+(function () {
+  var BUILD = window.VCF_BUILD || '14';
+  var RELOAD_KEY = 'vcf9.swReload:' + BUILD;
+
+  function registerSw() {
+    if (!('serviceWorker' in navigator) || !location.protocol.startsWith('http')) return;
+    navigator.serviceWorker.register('sw.js?v=' + BUILD).then(function (reg) {
+      if (reg.waiting) reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+      reg.addEventListener('updatefound', function () {
+        var nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', function () {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+            nw.postMessage({ type: 'SKIP_WAITING' });
+          }
+        });
       });
+    }).catch(function (err) {
+      console.warn('Service worker registration failed:', err);
+    });
+
+    var refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+      if (refreshing) return;
+      if (sessionStorage.getItem(RELOAD_KEY)) return;
+      refreshing = true;
+      try { sessionStorage.setItem(RELOAD_KEY, '1'); } catch (e) {}
+      location.reload();
     });
   }
+
+  /* If build id changed, drop old caches/SW once so the next load is fresh. */
+  (async function boot() {
+    try {
+      var prev = localStorage.getItem('vcf9.build');
+      if (prev && prev !== BUILD && 'caches' in window) {
+        var keys = await caches.keys();
+        await Promise.all(keys.map(function (k) { return caches.delete(k); }));
+        if (navigator.serviceWorker) {
+          var regs = await navigator.serviceWorker.getRegistrations();
+          await Promise.all(regs.map(function (r) { return r.unregister(); }));
+        }
+        localStorage.setItem('vcf9.build', BUILD);
+        if (!sessionStorage.getItem('vcf9.buildReload:' + BUILD)) {
+          sessionStorage.setItem('vcf9.buildReload:' + BUILD, '1');
+          location.reload();
+          return;
+        }
+      } else {
+        localStorage.setItem('vcf9.build', BUILD);
+      }
+    } catch (e) { /* storage blocked */ }
+    window.addEventListener('load', registerSw);
+    if (document.readyState === 'complete') registerSw();
+  })();
+})();
 </script>
 </body>
 </html>

@@ -529,7 +529,7 @@
 
       <section class="section howto-section howto-ai">
         <h3>Optional AI trainer (bring your own API keys)</h3>
-        <p><strong>DeepSeek</strong> = coach + spoken lesson scripts. <strong>OpenAI</strong> = Southern/Texas TTS voice only. No keys required for Study/Course/Quiz/Exam.</p>
+        <p><strong>DeepSeek = AI Trainer</strong> (coach + spoken scripts). <strong>OpenAI = TTS</strong> (Southern/Texas voice only). No quorum. Course works without keys.</p>
         <div class="cta-row">
           <a class="btn" href="#ai">Configure AI Trainer</a>
         </div>
@@ -1231,48 +1231,44 @@
     const oaiSaved = AITrainer.hasKey(cfg.openai);
     const dsFp = dsSaved ? AITrainer.keyFingerprint(cfg.deepseek.apiKey) : '';
     const oaiFp = oaiSaved ? AITrainer.keyFingerprint(cfg.openai.apiKey) : '';
+    const coachOk = !!(cfg.enabled && dsSaved && cfg.deepseek.enabled);
+    const ttsOk = !!(oaiSaved && cfg.openai.enabled);
     view.innerHTML = `
-      ${pageHead('AI Trainer', 'Bring your own API keys', 'DeepSeek = coach + spoken scripts. OpenAI = Southern/Texas TTS voice. Course works without keys; coach does not grade or unlock Next.')}
+      ${pageHead('AI Trainer', 'Bring your own API keys', 'Clear split: DeepSeek = AI Trainer coach + spoken scripts. OpenAI = Southern/Texas TTS voice only.')}
 
       <section class="section">
-        <h3>How it works</h3>
+        <h3>Who does what</h3>
         <ul class="howto-list">
-          <li><strong>DeepSeek</strong> — AI Trainer coach (Q&amp;A panel) and Course <em>spoken lesson scripts</em> (text only).</li>
-          <li><strong>OpenAI</strong> — text-to-speech only. Warm, clear <strong>Southern / Texas</strong> instructor voice via <code>gpt-4o-mini-tts</code>.</li>
-          <li><strong>Saved on this device</strong> — keys stay in <code>localStorage</code> (<code>vcf9.aiTrainer</code>). Leave a key field blank on Save to keep the stored key.</li>
-          <li><strong>Cost</strong> — pennies per section for OpenAI TTS; DeepSeek scripts are cheap; cached section replays are free.</li>
-          <li><strong>No keys</strong> — Study/Course/Quiz/Exam still work; Listen falls back to the device voice.</li>
+          <li><strong>DeepSeek = AI Trainer</strong> — coach Q&amp;A panel and Course spoken-lesson <em>scripts</em> (text only). Not the voice.</li>
+          <li><strong>OpenAI = TTS</strong> — Southern / Texas instructor voice only. Not the coach.</li>
+          <li><strong>No quorum</strong> — one coach provider (DeepSeek). OpenAI is never asked chat questions unless DeepSeek is missing.</li>
+          <li><strong>Saved on this device</strong> — leave a key field blank on Save to keep the stored key.</li>
         </ul>
         <p class="hint">${esc(status)}</p>
-        <p class="hint" id="aiPersistSummary">Stored keys: DeepSeek ${dsSaved ? `yes (${esc(dsFp)})` : 'no'} · OpenAI ${oaiSaved ? `yes (${esc(oaiFp)})` : 'no'}</p>
+        <p class="hint" id="aiPersistSummary">DeepSeek (AI Trainer): ${coachOk ? `ready (${esc(dsFp)})` : 'not ready'} · OpenAI (TTS): ${ttsOk ? `ready (${esc(oaiFp)})` : 'not ready'}</p>
       </section>
 
       <section class="section card ai-config">
         <h3>Configuration</h3>
         <label class="ai-toggle">
           <input type="checkbox" id="aiEnabled" ${cfg.enabled ? 'checked' : ''}>
-          <span>Enable AI Trainer (coach panel + DeepSeek scripts)</span>
-        </label>
-        <label class="ai-toggle">
-          <input type="checkbox" id="aiQuorum" ${cfg.quorum ? 'checked' : ''}>
-          <span>Quorum mode (ask both chat gateways — optional; coach still prefers DeepSeek first)</span>
+          <span>Enable AI Trainer (DeepSeek coach + scripts)</span>
         </label>
 
-        <div class="ai-provider">
-          <h4>DeepSeek — coach + spoken scripts</h4>
-          <p class="hint">Preferred AI Trainer. Writes teacher-style section scripts for audio. Does not generate voice.${dsSaved ? ` <strong>Key saved</strong> (${esc(dsFp)}).` : ''}</p>
-          <label class="ai-toggle"><input type="checkbox" id="aiDeepSeekOn" ${cfg.deepseek.enabled ? 'checked' : ''}> Use DeepSeek</label>
-          <label class="field-label">API key<input type="password" id="aiDeepSeekKey" autocomplete="off" spellcheck="false" value="" placeholder="${dsSaved ? 'Leave blank to keep saved key' : 'sk-…'}" data-has-saved="${dsSaved ? '1' : '0'}"></label>
+        <div class="ai-provider ai-role-trainer">
+          <h4>DeepSeek — AI Trainer (coach + scripts)</h4>
+          <p class="hint">This is the AI Trainer. Writes teacher-style section scripts for audio. Does not speak.${dsSaved ? ` <strong>Key saved</strong> (${esc(dsFp)}).` : ''}</p>
+          <label class="ai-toggle"><input type="checkbox" id="aiDeepSeekOn" ${cfg.deepseek.enabled ? 'checked' : ''}> Use DeepSeek as AI Trainer</label>
+          <label class="field-label">API key<input type="password" id="aiDeepSeekKey" autocomplete="off" spellcheck="false" value="" placeholder="${dsSaved ? 'Leave blank to keep saved key' : 'sk-…'}"></label>
           <label class="field-label">Chat model<input type="text" id="aiDeepSeekModel" value="${esc(cfg.deepseek.model)}"></label>
           <label class="field-label">Base URL<input type="text" id="aiDeepSeekBase" value="${esc(cfg.deepseek.baseUrl)}"></label>
         </div>
 
-        <div class="ai-provider">
-          <h4>OpenAI — Southern / Texas TTS voice</h4>
-          <p class="hint">Voice only. Not used for the coach when DeepSeek is available.${oaiSaved ? ` <strong>Key saved</strong> (${esc(oaiFp)}).` : ''}</p>
-          <label class="ai-toggle"><input type="checkbox" id="aiOpenAiOn" ${cfg.openai.enabled ? 'checked' : ''}> Use OpenAI TTS</label>
-          <label class="field-label">API key<input type="password" id="aiOpenAiKey" autocomplete="off" spellcheck="false" value="" placeholder="${oaiSaved ? 'Leave blank to keep saved key' : 'sk-…'}" data-has-saved="${oaiSaved ? '1' : '0'}"></label>
-          <label class="field-label">Chat model (optional / quorum only)<input type="text" id="aiOpenAiModel" value="${esc(cfg.openai.model)}"></label>
+        <div class="ai-provider ai-role-tts">
+          <h4>OpenAI — TTS voice only (Southern / Texas)</h4>
+          <p class="hint">Voice only. Not the AI Trainer coach.${oaiSaved ? ` <strong>Key saved</strong> (${esc(oaiFp)}).` : ''}</p>
+          <label class="ai-toggle"><input type="checkbox" id="aiOpenAiOn" ${cfg.openai.enabled ? 'checked' : ''}> Use OpenAI for TTS</label>
+          <label class="field-label">API key<input type="password" id="aiOpenAiKey" autocomplete="off" spellcheck="false" value="" placeholder="${oaiSaved ? 'Leave blank to keep saved key' : 'sk-…'}"></label>
           <label class="field-label">TTS model<input type="text" id="aiOpenAiTtsModel" value="${esc(cfg.openai.ttsModel || 'gpt-4o-mini-tts')}" placeholder="gpt-4o-mini-tts"></label>
           <label class="field-label">TTS voice id<input type="text" id="aiOpenAiTtsVoice" value="${esc(cfg.openai.ttsVoice || 'coral')}" placeholder="coral"></label>
           <label class="field-label">TTS style instructions<textarea id="aiOpenAiTtsStyle" rows="3">${esc(cfg.openai.ttsStyle || '')}</textarea></label>
@@ -1284,26 +1280,27 @@
           <button type="button" class="btn" data-action="ai-test">Test connection</button>
           <button type="button" class="btn btn-danger btn-sm" data-action="ai-clear">Clear keys</button>
         </div>
-        <p class="hint" id="aiConfigStatus">${ready
-          ? 'Ready — saved keys load automatically on this device.'
-          : 'Not ready — enable AI Trainer and save DeepSeek (coach/script) and/or OpenAI (TTS) keys.'}</p>
+        <p class="hint" id="aiConfigStatus">${coachOk || ttsOk
+          ? `Saved roles — AI Trainer: ${coachOk ? 'DeepSeek' : 'off'} · TTS: ${ttsOk ? 'OpenAI' : 'device voice'}.`
+          : 'Not ready — enable AI Trainer, turn on DeepSeek, and Save a DeepSeek key (OpenAI key for TTS).'}</p>
         <div id="aiTestOut" class="ai-test-out" hidden></div>
       </section>
 
       <section class="section">
         <h3>Privacy</h3>
-        <p class="hint">Keys never leave this browser except when calling your chosen API. Coach questions go to DeepSeek (and OpenAI only if quorum). Spoken scripts go to DeepSeek; audio bytes come from OpenAI TTS. Progress reset does not clear keys.</p>
+        <p class="hint">Keys stay in <code>localStorage</code> on this device. Coach/scripts → DeepSeek. Audio → OpenAI TTS. Progress reset does not clear keys.</p>
       </section>`;
   }
 
   function readAIForm() {
+    const prev = AITrainer.loadConfig();
     return {
       enabled: !!(document.getElementById('aiEnabled') || {}).checked,
-      quorum: !!(document.getElementById('aiQuorum') || {}).checked,
+      quorum: false,
       openai: {
         enabled: !!(document.getElementById('aiOpenAiOn') || {}).checked,
         apiKey: (document.getElementById('aiOpenAiKey') || {}).value || '',
-        model: (document.getElementById('aiOpenAiModel') || {}).value || '',
+        model: prev.openai.model || 'gpt-4o-mini',
         baseUrl: (document.getElementById('aiOpenAiBase') || {}).value || '',
         ttsModel: (document.getElementById('aiOpenAiTtsModel') || {}).value || '',
         ttsVoice: (document.getElementById('aiOpenAiTtsVoice') || {}).value || '',
@@ -1415,8 +1412,8 @@
     document.body.classList.toggle('ai-coach-open', !panel.hidden && !panel.classList.contains('is-collapsed'));
     const status = document.getElementById('aiCoachStatus');
     if (status) {
-      const names = AITrainer.activeProviders(cfg).map(p => p.label).join(' + ');
-      status.textContent = cfg.quorum && AITrainer.activeProviders(cfg).length > 1 ? `Quorum · ${names}` : names || 'BYOK';
+      const ds = AITrainer.deepseekProvider && AITrainer.deepseekProvider(cfg);
+      status.textContent = ds ? 'DeepSeek · AI Trainer' : (AITrainer.isReady(cfg) ? 'BYOK' : 'Off');
     }
     renderAiCoachLog();
   }
@@ -1448,21 +1445,13 @@
     if (send) send.disabled = true;
     try {
       const result = await AITrainer.ask(q, buildAiContext());
-      if (result.mode === 'quorum') {
-        result.answers.forEach(a => {
-          aiChat.push({
-            role: 'assistant',
-            text: a.text,
-            meta: `${a.label}${result.agree ? ' · agrees with peer' : ' · compare with peer'}`
-          });
+      result.answers.forEach(a => {
+        aiChat.push({
+          role: 'assistant',
+          text: a.text,
+          meta: a.label + (result.note ? ` · ${result.note}` : '')
         });
-        if (result.errors && result.errors.length) {
-          aiChat.push({ role: 'assistant', text: 'Some providers failed:\n' + result.errors.join('\n'), meta: 'quorum' });
-        }
-      } else {
-        const a = result.answers[0];
-        aiChat.push({ role: 'assistant', text: a.text, meta: a.label });
-      }
+      });
     } catch (err) {
       aiChat.push({ role: 'assistant', text: err.message || String(err), meta: 'error' });
     } finally {

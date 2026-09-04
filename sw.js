@@ -1,8 +1,7 @@
-/* VCF 9 Trainer — service worker: cache-first offline shell. */
+/* VCF 9 Trainer — service worker: network-first for app shell so deploys win. */
 
-const CACHE_NAME = 'vcf-trainer-v13';
+const CACHE_NAME = 'vcf-trainer-v14';
 
-/* Files the app cannot run without — a failure here fails the install. */
 const CORE_ASSETS = [
   './',
   './index.html',
@@ -18,7 +17,6 @@ const CORE_ASSETS = [
   './data/figures.json'
 ];
 
-/* Nice-to-have files; cached individually so a missing icon can't break install. */
 const OPTIONAL_ASSETS = [
   './icons/icon-192.png',
   './icons/icon-512.png',
@@ -29,6 +27,12 @@ const OPTIONAL_ASSETS = [
   './data/figures/fig-dc-topology.png',
   './data/figures/fig-logical-design-template.png'
 ];
+
+function isAppShell(url, req) {
+  if (req.mode === 'navigate') return true;
+  const p = url.pathname;
+  return /\.(html|js|css|json)$/i.test(p) || p.endsWith('/') || p.endsWith('/vcf-trainer');
+}
 
 self.addEventListener('install', event => {
   event.waitUntil((async () => {
@@ -48,7 +52,9 @@ self.addEventListener('activate', event => {
 });
 
 self.addEventListener('message', event => {
-  if (event.data === 'skipWaiting') self.skipWaiting();
+  if (event.data === 'skipWaiting' || (event.data && event.data.type === 'SKIP_WAITING')) {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('fetch', event => {
@@ -59,9 +65,31 @@ self.addEventListener('fetch', event => {
   if (url.origin !== self.location.origin) return;
 
   event.respondWith((async () => {
+    /* App shell: network-first so GitHub Pages deploys appear without manual hard refresh. */
+    if (isAppShell(url, req)) {
+      try {
+        const fresh = await fetch(req, { cache: 'no-store' });
+        if (fresh && fresh.ok) {
+          const cache = await caches.open(CACHE_NAME);
+          cache.put(req, fresh.clone());
+          return fresh;
+        }
+      } catch (err) { /* fall through to cache */ }
+      const cachedShell = await caches.match(req, { ignoreSearch: true });
+      if (cachedShell) return cachedShell;
+      if (req.mode === 'navigate') {
+        const shell = await caches.match('./index.html');
+        if (shell) return shell;
+      }
+      return new Response('Offline and this resource is not cached.', {
+        status: 503,
+        headers: { 'Content-Type': 'text/plain' }
+      });
+    }
+
+    /* Images / icons: cache-first. */
     const cached = await caches.match(req, { ignoreSearch: true });
     if (cached) return cached;
-
     try {
       const res = await fetch(req);
       if (res && res.ok && res.type === 'basic') {
@@ -70,11 +98,6 @@ self.addEventListener('fetch', event => {
       }
       return res;
     } catch (err) {
-      /* Offline and uncached: fall back to the app shell for navigations. */
-      if (req.mode === 'navigate') {
-        const shell = await caches.match('./index.html');
-        if (shell) return shell;
-      }
       return new Response('Offline and this resource is not cached.', {
         status: 503,
         headers: { 'Content-Type': 'text/plain' }
